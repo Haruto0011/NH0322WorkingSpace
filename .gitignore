@@ -1,0 +1,28 @@
+# macOSの不要ファイル
+.DS_Store
+
+# 仮想環境
+.venv
+env/
+venv/
+NH009space/
+
+# Jupyter Notebookのチェックポイント
+.ipynb_checkpoints/
+
+# Pythonキャッシュファイル
+__pycache__/
+.pys
+.pyc
+.pyo
+.pyd
+
+# VS Codeの設定ファイル（必要に応じて）
+.vscode/
+
+# データファイル（不要なCSVなど）
+.csv
+.tsv
+
+# gradioの自動生成フォルダ
+.gradio/
