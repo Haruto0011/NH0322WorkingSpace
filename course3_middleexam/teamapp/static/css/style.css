@@ -1,0 +1,28 @@
+/* サイト独自の見た目はここに足していく（Bootstrap の上書き） */
+
+body {
+  padding-bottom: 2rem;
+}
+
+/* 改行をそのまま表示（予定のメモ用） */
+.pre-line {
+  white-space: pre-line;
+}
+
+/* メンバー一覧の背番号 */
+.number-badge {
+  display: inline-block;
+  min-width: 2.2em;
+  padding: .15em .4em;
+  border-radius: .4em;
+  background: #198754;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* リンク行を少し見やすく */
+.list-group-item-action:hover {
+  background-color: #f1f8f4;
+}

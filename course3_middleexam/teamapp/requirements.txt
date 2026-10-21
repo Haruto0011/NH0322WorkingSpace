@@ -1,0 +1,3 @@
+flask
+# サーバ(PostgreSQL)につなぐときは下の行の # を外す
+# psycopg2-binary

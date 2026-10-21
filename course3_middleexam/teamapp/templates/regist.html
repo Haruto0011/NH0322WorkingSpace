@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="col-12 col-sm-8 col-md-5 mx-auto mt-4">
+  <h1 class="h5 text-center mb-3">新規登録</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post" action="{{ url_for('registing') }}">
+        <div class="mb-3">
+          <label class="form-label">名前</label>
+          <input type="text" class="form-control" name="unf" required placeholder="チームで呼ばれている名前">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">メールアドレス</label>
+          <input type="email" class="form-control" name="emf" required autocomplete="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">パスワード</label>
+          <input type="password" class="form-control" name="pwf1" required minlength="8" autocomplete="new-password">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">パスワード（確認）</label>
+          <input type="password" class="form-control" name="pwf2" required minlength="8" autocomplete="new-password">
+        </div>
+        <button class="btn btn-success w-100">登録する</button>
+      </form>
+    </div>
+  </div>
+  <p class="text-center small mt-3"><a href="{{ url_for('login') }}">ログイン画面へ戻る</a></p>
+</div>
+
+{% endblock %}

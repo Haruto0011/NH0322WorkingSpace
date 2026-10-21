@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="col-12 col-sm-8 col-md-5 mx-auto mt-4">
+  <div class="text-center mb-3">
+    <div class="display-5">⚽</div>
+    <h1 class="h5">{{ team_name }}</h1>
+  </div>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post" action="{{ url_for('logingin') }}">
+        <div class="mb-3">
+          <label class="form-label">メールアドレス</label>
+          <input type="email" class="form-control" name="emf" required autocomplete="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">パスワード</label>
+          <input type="password" class="form-control" name="pwf" required autocomplete="current-password">
+        </div>
+        <button class="btn btn-success w-100">ログイン</button>
+      </form>
+    </div>
+  </div>
+  <p class="text-center small mt-3">はじめての方は <a href="{{ url_for('regist') }}">こちら</a> から登録</p>
+</div>
+
+{% endblock %}

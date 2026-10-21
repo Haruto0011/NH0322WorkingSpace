@@ -1,0 +1,33 @@
+{# 複数の画面で使い回す小さな部品。
+   使う側: {% from "_macros.html" import etype_badge, status_badge, event_row with context %} #}
+
+{% macro etype_badge(etype) -%}
+<span class="badge {{ {'match': 'bg-danger', 'practice': 'bg-primary'}.get(etype, 'bg-secondary') }}">{{ ETYPES.get(etype, etype) }}</span>
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+{% if status == 'yes' %}<span class="badge bg-success">○ 参加</span>
+{% elif status == 'maybe' %}<span class="badge bg-warning text-dark">△ 未定</span>
+{% elif status == 'no' %}<span class="badge bg-secondary">× 欠席</span>
+{% else %}<span class="badge bg-white text-muted border">未回答</span>{% endif %}
+{%- endmacro %}
+
+{# 予定一覧の1行（ホームと予定一覧で共通） #}
+{% macro event_row(e) -%}
+<a href="{{ url_for('event_detail', eid=e.eid) }}" class="list-group-item list-group-item-action py-3">
+  <div class="d-flex justify-content-between align-items-center gap-2">
+    <div class="min-w-0">
+      <div class="mb-1">
+        {{ etype_badge(e.etype) }}
+        <strong class="ms-1">{{ e.event_date|jdate }}</strong>
+        {% if e.start_time %}<span class="ms-1">{{ e.start_time|jtime }}{% if e.end_time %}〜{{ e.end_time|jtime }}{% endif %}</span>{% endif %}
+      </div>
+      <div class="text-truncate">{{ e.title }}{% if e.place %} <small class="text-muted">@ {{ e.place }}</small>{% endif %}</div>
+    </div>
+    <div class="text-end flex-shrink-0">
+      {{ status_badge(e.my_status) }}
+      <div><small class="text-muted">参加 {{ e.yes_count }}人</small></div>
+    </div>
+  </div>
+</a>
+{%- endmacro %}

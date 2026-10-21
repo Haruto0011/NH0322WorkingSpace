@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import etype_badge, status_badge with context %}
+{% block content %}
+
+<a href="{{ url_for('events') }}" class="text-decoration-none small">&larr; 予定一覧</a>
+
+{# ---------- 予定の情報 ---------- #}
+<div class="card shadow-sm my-2">
+  <div class="card-body">
+    {{ etype_badge(ev.etype) }}
+    <h1 class="h4 mt-2">{{ ev.title }}</h1>
+    <dl class="row mb-0">
+      <dt class="col-4 col-sm-3 fw-normal text-muted">日時</dt>
+      <dd class="col-8 col-sm-9">
+        {{ ev.event_date|jdate }}
+        {% if ev.start_time %}{{ ev.start_time|jtime }}{% if ev.end_time %}〜{{ ev.end_time|jtime }}{% endif %}{% endif %}
+      </dd>
+      {% if ev.place %}
+      <dt class="col-4 col-sm-3 fw-normal text-muted">場所</dt><dd class="col-8 col-sm-9">{{ ev.place }}</dd>
+      {% endif %}
+      {% if ev.opponent %}
+      <dt class="col-4 col-sm-3 fw-normal text-muted">対戦相手</dt><dd class="col-8 col-sm-9">{{ ev.opponent }}</dd>
+      {% endif %}
+      {% if ev.note %}
+      <dt class="col-4 col-sm-3 fw-normal text-muted">メモ</dt><dd class="col-8 col-sm-9 pre-line">{{ ev.note }}</dd>
+      {% endif %}
+    </dl>
+
+    {% if g.user.role == 'admin' %}
+    <div class="d-flex gap-2 mt-3">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('event_edit', eid=ev.eid) }}">編集</a>
+      <form method="post" action="{{ url_for('event_delete', eid=ev.eid) }}"
+            onsubmit="return confirm('この予定を削除しますか？（出欠も消えます）');">
+        <button class="btn btn-sm btn-outline-danger">削除</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ---------- 自分の出欠 ---------- #}
+<div class="card shadow-sm mb-2">
+  <div class="card-body">
+    <h2 class="h6">あなたの出欠</h2>
+    <form method="post" action="{{ url_for('attend', eid=ev.eid) }}">
+      <div class="btn-group w-100 mb-2" role="group" aria-label="出欠">
+        {% for key, label in STATUSES.items() %}
+        <input type="radio" class="btn-check" name="status" id="st-{{ key }}" value="{{ key }}"
+               {% if mine and mine.status == key %}checked{% endif %}>
+        <label class="btn btn-outline-{{ {'yes': 'success', 'maybe': 'warning', 'no': 'secondary'}[key] }}"
+               for="st-{{ key }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+      <input type="text" class="form-control mb-2" name="comment" maxlength="100"
+             placeholder="ひとこと（任意）" value="{{ mine.comment if mine and mine.comment else '' }}">
+      <button class="btn btn-success w-100">回答する</button>
+    </form>
+  </div>
+</div>
+
+{# ---------- みんなの出欠 ---------- #}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 d-flex align-items-center gap-2">
+      みんなの出欠
+      <span class="badge bg-success">○ {{ counts.yes }}</span>
+      <span class="badge bg-warning text-dark">△ {{ counts.maybe }}</span>
+      <span class="badge bg-secondary">× {{ counts.no }}</span>
+    </h2>
+    <ul class="list-group list-group-flush">
+      {% for m in members %}
+      <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+        <div>
+          {% if m.number %}<span class="text-muted me-1">#{{ m.number }}</span>{% endif %}{{ m.uname }}
+          {% if m.position %}<small class="text-muted">({{ m.position }})</small>{% endif %}
+          {% if m.comment %}<div class="small text-muted">💬 {{ m.comment }}</div>{% endif %}
+        </div>
+        {{ status_badge(m.status) }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% endblock %}

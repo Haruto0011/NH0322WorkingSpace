@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1 class="h5 mb-3">メンバー <small class="text-muted">({{ members|length }}人)</small></h1>
+
+<div class="card shadow-sm">
+  <ul class="list-group list-group-flush">
+    {% for m in members %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <div>
+        <span class="number-badge">{{ m.number if m.number else '–' }}</span>
+        <span class="ms-2">{{ m.uname }}</span>
+        {% if m.position %}<span class="badge bg-light text-dark border ms-1">{{ m.position }}</span>{% endif %}
+      </div>
+      {% if m.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% endblock %}
