@@ -9,6 +9,7 @@ from datetime import date, timedelta
 
 from werkzeug.security import generate_password_hash
 
+import config
 import db
 
 conn = db.get_conn()
@@ -38,18 +39,21 @@ for name, email, role, number, pos in users:
                 (name, email, pw, role, number, pos))
 
 today = date.today()
+season = config.CURRENT_SEASON
 events = [
-    # (種別, タイトル, 日付, 開始, 終了, 場所, 相手, メモ)
-    ("practice", "通常練習", today - timedelta(days=5), "19:00", "21:00", "〇〇グラウンド", "", ""),
-    ("practice", "通常練習", today + timedelta(days=1), "19:00", "21:00", "〇〇グラウンド", "", "ビブス持参"),
-    ("match",    "練習試合 vs △△FC", today + timedelta(days=4), "10:00", "12:00", "□□公園サッカー場", "△△FC", "集合 9:15\n白ユニフォーム"),
-    ("practice", "通常練習", today + timedelta(days=8), "19:00", "21:00", "〇〇グラウンド", "", ""),
-    ("other",    "新歓ミーティング", today + timedelta(days=12), "18:00", None, "学生会館 201", "", "次期役員の相談"),
+    # (種別, タイトル, 日付, 開始, 終了, 場所, 相手, メモ, 大会)
+    ("match",    "リーグ戦 vs 東京蹴球団", today - timedelta(days=12), "16:10", "17:45", "みらい平グラウンド", "東京蹴球団", "", "東京都リーグ"),
+    ("practice", "通常練習", today - timedelta(days=5), "19:00", "21:00", "〇〇グラウンド", "", "", ""),
+    ("practice", "通常練習", today + timedelta(days=1), "19:00", "21:00", "〇〇グラウンド", "", "ビブス持参", ""),
+    ("match",    "練習試合 vs △△FC", today + timedelta(days=4), "10:00", "12:00", "□□公園サッカー場", "△△FC", "集合 9:15\n白ユニフォーム", "練習試合"),
+    ("practice", "通常練習", today + timedelta(days=8), "19:00", "21:00", "〇〇グラウンド", "", "", ""),
+    ("match",    "東京カップ 1回戦", today + timedelta(days=11), "13:50", "17:00", "代々木公園サッカー場", "FC PHOENIX", "", "東京カップ"),
+    ("other",    "新歓ミーティング", today + timedelta(days=12), "18:00", None, "学生会館 201", "", "次期役員の相談", ""),
 ]
-for etype, title, d, st, et, place, opp, note in events:
-    cur.execute(q("insert into events (etype, title, event_date, start_time, end_time, place, opponent, note, created_by) "
-                  "values (%s, %s, %s, %s, %s, %s, %s, %s, 1)"),
-                (etype, title, d.isoformat(), st, et, place, opp, note))
+for etype, title, d, st, et, place, opp, note, comp in events:
+    cur.execute(q("insert into events (etype, title, event_date, start_time, end_time, place, opponent, note, season, competition, created_by) "
+                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)"),
+                (etype, title, d.isoformat(), st, et, place, opp, note, season, comp))
 
 # 出欠を適当に入れる
 cur.execute(q("select uid from users order by uid"))
@@ -58,7 +62,7 @@ cur.execute(q("select eid from events order by eid"))
 eids = [r["eid"] for r in cur.fetchall()]
 
 pattern = ["yes", "yes", "no", "yes", None, "yes"]  # 6人分（None は未回答）
-for i, eid in enumerate(eids[:3]):
+for i, eid in enumerate(eids[:4]):
     for j, uid in enumerate(uids):
         status = pattern[(i + j) % len(pattern)]
         if status:

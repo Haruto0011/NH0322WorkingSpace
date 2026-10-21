@@ -14,6 +14,10 @@ import db
 MIGRATIONS = [
     ("events に cancelled 列を追加", "alter table events add column cancelled integer not null default 0"),
     ("出欠の '未定' を廃止（欠席扱いに）", "update attendance set status = 'no' where status not in ('yes', 'no')"),
+    ("events に season 列を追加", "alter table events add column season text"),
+    ("events に competition 列を追加", "alter table events add column competition text"),
+    ("season が空の予定に今のシーズンを入れる",
+     f"update events set season = '{config.CURRENT_SEASON}' where season is null"),
 ]
 
 if config.DB_KIND == "sqlite":

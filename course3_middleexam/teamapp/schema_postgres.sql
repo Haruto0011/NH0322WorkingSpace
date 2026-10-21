@@ -24,7 +24,9 @@ create table if not exists events (
   opponent   text,                            -- 試合のときだけ
   note       text,
   created_by integer references users(uid),
-  cancelled  integer not null default 0     -- 1 なら中止
+  cancelled  integer not null default 0,    -- 1 なら中止
+  season     text,                          -- '2026' など。スタッツの集計単位
+  competition text                          -- '東京都リーグ' など（試合のときだけ）
 );
 
 -- 出欠：1人1予定につき1行（eid, uid の組み合わせがキー）

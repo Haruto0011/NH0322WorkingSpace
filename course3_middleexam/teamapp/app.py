@@ -283,7 +283,20 @@ def _event_from_form():
         "place": request.form.get("place", "").strip(),
         "opponent": request.form.get("opponent", "").strip(),
         "note": request.form.get("note", "").strip(),
+        "season": request.form.get("season", "").strip() or config.CURRENT_SEASON,
+        "competition": request.form.get("competition", "").strip(),
     }
+
+
+def _form_choices():
+    """予定フォームの入力候補（これまでに使ったシーズン名・大会名）"""
+    seasons = [r["season"] for r in db.query(
+        "select distinct season from events where season is not null and season <> '' order by season desc")]
+    if config.CURRENT_SEASON not in seasons:
+        seasons.insert(0, config.CURRENT_SEASON)
+    competitions = [r["competition"] for r in db.query(
+        "select distinct competition from events where competition is not null and competition <> '' order by competition")]
+    return {"seasons": seasons, "competitions": competitions}
 
 
 @app.route("/events/new", methods=["GET", "POST"])
@@ -293,16 +306,16 @@ def event_new():
         f = _event_from_form()
         if not f["title"] or not f["event_date"]:
             flash("タイトルと日付は必須です。", "danger")
-            return render_template("event_form.html", title="予定を追加", ev=f)
+            return render_template("event_form.html", title="予定を追加", ev=f, **_form_choices())
         db.execute("""
             insert into events (etype, title, event_date, start_time, end_time,
-                                place, opponent, note, created_by)
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                place, opponent, note, season, competition, created_by)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (f["etype"], f["title"], f["event_date"], f["start_time"], f["end_time"],
-              f["place"], f["opponent"], f["note"], g.user["uid"]))
+              f["place"], f["opponent"], f["note"], f["season"], f["competition"], g.user["uid"]))
         flash("予定を追加しました。", "success")
         return redirect(url_for("events"))
-    return render_template("event_form.html", title="予定を追加", ev=None)
+    return render_template("event_form.html", title="予定を追加", ev=None, **_form_choices())
 
 
 @app.route("/events/<int:eid>/edit", methods=["GET", "POST"])
@@ -316,17 +329,17 @@ def event_edit(eid):
         if not f["title"] or not f["event_date"]:
             flash("タイトルと日付は必須です。", "danger")
             f["eid"] = eid
-            return render_template("event_form.html", title="予定を編集", ev=f)
+            return render_template("event_form.html", title="予定を編集", ev=f, **_form_choices())
         db.execute("""
             update events
                set etype = %s, title = %s, event_date = %s, start_time = %s, end_time = %s,
-                   place = %s, opponent = %s, note = %s
+                   place = %s, opponent = %s, note = %s, season = %s, competition = %s
              where eid = %s
         """, (f["etype"], f["title"], f["event_date"], f["start_time"], f["end_time"],
-              f["place"], f["opponent"], f["note"], eid))
+              f["place"], f["opponent"], f["note"], f["season"], f["competition"], eid))
         flash("予定を更新しました。", "success")
         return redirect(url_for("event_detail", eid=eid))
-    return render_template("event_form.html", title="予定を編集", ev=ev)
+    return render_template("event_form.html", title="予定を編集", ev=ev, **_form_choices())
 
 
 @app.route("/events/<int:eid>/cancel", methods=["POST"])

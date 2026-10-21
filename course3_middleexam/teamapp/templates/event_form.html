@@ -38,6 +38,26 @@
         <label class="form-label">場所</label>
         <input type="text" class="form-control" name="place" value="{{ ev.place if ev and ev.place else '' }}">
       </div>
+      <div class="row">
+        <div class="col-5 col-sm-4 mb-3">
+          <label class="form-label">シーズン</label>
+          <input type="text" class="form-control" name="season" list="season-list"
+                 value="{{ ev.season if ev and ev.season else seasons[0] }}">
+          {# datalist: 入力欄をタップすると過去に使った値が候補に出る #}
+          <datalist id="season-list">
+            {% for s in seasons %}<option value="{{ s }}">{% endfor %}
+          </datalist>
+        </div>
+        <div class="col-7 col-sm-8 mb-3">
+          <label class="form-label">大会（試合のとき）</label>
+          <input type="text" class="form-control" name="competition" list="competition-list"
+                 placeholder="例: 東京都リーグ / 東京カップ / 練習試合"
+                 value="{{ ev.competition if ev and ev.competition else '' }}">
+          <datalist id="competition-list">
+            {% for c in competitions %}<option value="{{ c }}">{% endfor %}
+          </datalist>
+        </div>
+      </div>
       <div class="mb-3">
         <label class="form-label">対戦相手（試合のとき）</label>
         <input type="text" class="form-control" name="opponent" value="{{ ev.opponent if ev and ev.opponent else '' }}">

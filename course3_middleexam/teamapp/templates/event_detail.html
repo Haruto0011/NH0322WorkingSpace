@@ -44,6 +44,10 @@
       {% if ev.opponent %}
       <dt class="col-4 col-sm-3 fw-normal text-muted">対戦相手</dt><dd class="col-8 col-sm-9">{{ ev.opponent }}</dd>
       {% endif %}
+      {% if ev.etype == 'match' and (ev.season or ev.competition) %}
+      <dt class="col-4 col-sm-3 fw-normal text-muted">大会</dt>
+      <dd class="col-8 col-sm-9">{% if ev.season %}{{ ev.season }}シーズン{% endif %}{% if ev.competition %} ／ {{ ev.competition }}{% endif %}</dd>
+      {% endif %}
       {% if ev.note %}
       <dt class="col-4 col-sm-3 fw-normal text-muted">メモ</dt><dd class="col-8 col-sm-9 pre-line">{{ ev.note }}</dd>
       {% endif %}

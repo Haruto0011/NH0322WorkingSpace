@@ -10,6 +10,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # チーム名（画面の左上やタイトルに出る）
 TEAM_NAME = "〇〇FC"
 
+# 今のシーズン。予定を追加するときの初期値になる（年が変わったらここを直す）
+CURRENT_SEASON = "2026"
+
 # セッション（ログイン状態）の暗号化に使う鍵。好きな文字列に変えてもよい
 SECRET_KEY = "6c424ac5d16d778bc1b14afa2c02b1c3"
 

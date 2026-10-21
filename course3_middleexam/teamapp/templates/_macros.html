@@ -24,6 +24,7 @@
         {% if e.start_time %}<span class="ms-1 strike">{{ e.start_time|jtime }}{% if e.end_time %}〜{{ e.end_time|jtime }}{% endif %}</span>{% endif %}
       </div>
       <div class="text-truncate strike">{{ e.title }}{% if e.place %} <small class="text-muted">@ {{ e.place }}</small>{% endif %}</div>
+      {% if e.etype == 'match' and e.competition %}<small class="text-muted">🏆 {{ e.competition }}</small>{% endif %}
     </div>
     {% if not e.cancelled %}
     <div class="text-end flex-shrink-0">
