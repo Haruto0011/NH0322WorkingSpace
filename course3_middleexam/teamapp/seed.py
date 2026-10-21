@@ -42,12 +42,13 @@ today = date.today()
 season = config.CURRENT_SEASON
 events = [
     # (種別, タイトル, 日付, 開始, 終了, 場所, 相手, メモ, 大会)
+    ("match",    "リーグ戦 vs FC PHOENIX", today - timedelta(days=19), "13:50", "15:30", "代々木公園サッカー場", "FC PHOENIX", "", "東京都リーグ"),
     ("match",    "リーグ戦 vs 東京蹴球団", today - timedelta(days=12), "16:10", "17:45", "みらい平グラウンド", "東京蹴球団", "", "東京都リーグ"),
     ("practice", "通常練習", today - timedelta(days=5), "19:00", "21:00", "〇〇グラウンド", "", "", ""),
     ("practice", "通常練習", today + timedelta(days=1), "19:00", "21:00", "〇〇グラウンド", "", "ビブス持参", ""),
     ("match",    "練習試合 vs △△FC", today + timedelta(days=4), "10:00", "12:00", "□□公園サッカー場", "△△FC", "集合 9:15\n白ユニフォーム", "練習試合"),
     ("practice", "通常練習", today + timedelta(days=8), "19:00", "21:00", "〇〇グラウンド", "", "", ""),
-    ("match",    "東京カップ 1回戦", today + timedelta(days=11), "13:50", "17:00", "代々木公園サッカー場", "FC PHOENIX", "", "東京カップ"),
+    ("match",    "東京カップ 1回戦", today + timedelta(days=11), "13:50", "17:00", "代々木公園サッカー場", "杉並FC", "", "東京カップ"),
     ("other",    "新歓ミーティング", today + timedelta(days=12), "18:00", None, "学生会館 201", "", "次期役員の相談", ""),
 ]
 for etype, title, d, st, et, place, opp, note, comp in events:
@@ -62,13 +63,39 @@ cur.execute(q("select eid from events order by eid"))
 eids = [r["eid"] for r in cur.fetchall()]
 
 pattern = ["yes", "yes", "no", "yes", None, "yes"]  # 6人分（None は未回答）
-for i, eid in enumerate(eids[:4]):
+for i, eid in enumerate(eids[:5]):
     for j, uid in enumerate(uids):
         status = pattern[(i + j) % len(pattern)]
         if status:
             comment = "少し遅れます" if (i + j) % 4 == 0 else ""
             cur.execute(q("insert into attendance (eid, uid, status, comment) values (%s, %s, %s, %s)"),
                         (eid, uid, status, comment))
+
+# 過去2試合の結果と得点（uids: 0=監督 1=田中 2=鈴木 3=佐藤 4=高橋 5=伊藤）
+sato, takahashi, ito = uids[3], uids[4], uids[5]
+results = [
+    # (eid, 前半自, 後半自, 前半相手, 後半相手, MVP, メモ, 得点リスト)
+    (eids[0], 1, 1, 0, 0, takahashi, "守備が安定していた。", [
+        ("our", takahashi, sato, 1, 12, ""),
+        ("our", ito, None, 2, 33, ""),
+    ]),
+    (eids[1], 3, 1, 0, 2, ito, "前半で決めきれたのが大きい。後半の失点は要反省。", [
+        ("our", ito, takahashi, 1, 20, ""),
+        ("our", sato, None, 1, 25, "PK"),
+        ("our", ito, None, 1, 40, ""),
+        ("opp", None, None, 2, 20, ""),
+        ("opp", None, None, 2, 30, ""),
+        ("our", ito, None, 2, 40, ""),
+    ]),
+]
+for eid, o1, o2, p1, p2, mvp, memo, goals in results:
+    cur.execute(q("insert into match_results (eid, our_1h, our_2h, opp_1h, opp_2h, mvp_uid, memo) "
+                  "values (%s, %s, %s, %s, %s, %s, %s)"),
+                (eid, o1, o2, p1, p2, mvp, memo))
+    for side, scorer, assist, half, minute, note in goals:
+        cur.execute(q("insert into goals (eid, side, scorer_uid, assist_uid, half, minute, note) "
+                      "values (%s, %s, %s, %s, %s, %s, %s)"),
+                    (eid, side, scorer, assist, half, minute, note))
 
 conn.commit()
 cur.close()

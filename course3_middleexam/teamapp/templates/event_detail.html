@@ -73,6 +73,63 @@
   </div>
 </div>
 
+{# ---------- 試合結果（試合のときだけ） ---------- #}
+{% if ev.etype == 'match' and not ev.cancelled %}
+<div class="card shadow-sm mb-2">
+  <div class="card-body">
+    <h2 class="h6 d-flex justify-content-between align-items-center">
+      試合結果
+      {% if g.user.role == 'admin' %}
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('result_edit', eid=ev.eid) }}">{{ '結果を編集' if result else '結果を入力' }}</a>
+      {% endif %}
+    </h2>
+
+    {% if result %}
+    <div class="d-flex align-items-center justify-content-center gap-3 my-3">
+      <div class="score-team text-end">{{ team_name }}</div>
+      <div class="score-num">{{ score.our }} <span class="text-muted">-</span> {{ score.opp }}</div>
+      <div class="score-team">{{ ev.opponent or '相手' }}</div>
+    </div>
+    <div class="text-center mb-3">
+      <span class="badge {{ {'win': 'bg-success', 'draw': 'bg-secondary', 'loss': 'bg-danger'}[score.outcome] }}">{{ OUTCOMES[score.outcome] }}</span>
+      {% if result.our_pk is not none and result.opp_pk is not none %}<small class="text-muted">PK {{ result.our_pk }}-{{ result.opp_pk }}</small>{% endif %}
+    </div>
+
+    <table class="table table-sm text-center mb-3 halves">
+      <thead><tr><th></th><th>前半</th><th>後半</th><th>合計</th></tr></thead>
+      <tbody>
+        <tr><th class="fw-normal text-start">{{ team_name }}</th><td>{{ result.our_1h }}</td><td>{{ result.our_2h }}</td><td class="fw-bold">{{ score.our }}</td></tr>
+        <tr><th class="fw-normal text-start">{{ ev.opponent or '相手' }}</th><td>{{ result.opp_1h }}</td><td>{{ result.opp_2h }}</td><td class="fw-bold">{{ score.opp }}</td></tr>
+      </tbody>
+    </table>
+
+    {% if goals %}
+    <h3 class="h6 text-muted">得点</h3>
+    <ul class="list-unstyled mb-3">
+      {% for gl in goals %}
+      <li class="d-flex align-items-center gap-2 py-1 border-bottom">
+        <span class="badge bg-light text-dark border">{{ HALVES[gl.half] }}{% if gl.minute is not none %} {{ gl.minute }}'{% endif %}</span>
+        {% if gl.side == 'our' %}
+          <span>⚽ <strong>{{ gl.scorer or '（得点者未定）' }}</strong>{% if gl.assist %} <small class="text-muted">A. {{ gl.assist }}</small>{% endif %}</span>
+        {% else %}
+          <span class="text-muted">相手の得点</span>
+        {% endif %}
+        {% if gl.note %}<small class="text-muted">({{ gl.note }})</small>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if result.mvp %}<div>🏅 <strong>MVP</strong> {{ result.mvp }}</div>{% endif %}
+    {% if result.memo %}<div class="small text-muted mt-2 pre-line">{{ result.memo }}</div>{% endif %}
+
+    {% else %}
+    <p class="text-muted small mb-0">結果はまだ入力されていません。</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 {# ---------- 自分の出欠（中止のときは出さない） ---------- #}
 {% if not ev.cancelled %}
 <div class="card shadow-sm mb-2">

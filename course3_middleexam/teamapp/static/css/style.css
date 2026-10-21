@@ -81,3 +81,30 @@ body {
   font-size: .75rem;
   color: #6c757d;
 }
+
+/* ---------- スコア表示 ---------- */
+.score-num {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.score-team {
+  flex: 1 1 0;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.summary-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.halves th, .halves td {
+  padding: .25rem .5rem;
+}
+.score-input input[type="number"] {
+  max-width: 6rem;
+  margin: 0 auto;
+}

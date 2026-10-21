@@ -30,6 +30,8 @@ db.init_app(app)
 ETYPES = {"practice": "練習", "match": "試合", "other": "その他"}
 POSITIONS = ["GK", "DF", "MF", "FW"]
 STATUSES = {"yes": "出席", "no": "欠席"}   # 回答していない人は「未回答」扱い
+HALVES = {1: "前半", 2: "後半"}
+OUTCOMES = {"win": "勝ち", "draw": "引き分け", "loss": "負け"}
 WEEKDAYS = "月火水木金土日"
 
 
@@ -57,6 +59,8 @@ def inject_globals():
         "ETYPES": ETYPES,
         "POSITIONS": POSITIONS,
         "STATUSES": STATUSES,
+        "HALVES": HALVES,
+        "OUTCOMES": OUTCOMES,
     }
 
 
@@ -235,8 +239,19 @@ def event_detail(eid):
             mine = m
     counts = {key: len(lst) for key, lst in groups.items()}
 
+    # 試合なら結果と得点も
+    result = goals = score = None
+    if ev["etype"] == "match":
+        result = _match_result(eid)
+        goals = _goals(eid)
+        if result:
+            our = result["our_1h"] + result["our_2h"]
+            opp = result["opp_1h"] + result["opp_2h"]
+            score = {"our": our, "opp": opp, "outcome": _outcome(our, opp)}
+
     return render_template("event_detail.html", title=ev["title"],
-                           ev=ev, groups=groups, counts=counts, mine=mine)
+                           ev=ev, groups=groups, counts=counts, mine=mine,
+                           result=result, goals=goals, score=score)
 
 
 @app.route("/events/<int:eid>/attend", methods=["POST"])
@@ -358,10 +373,161 @@ def event_cancel(eid):
 @app.route("/events/<int:eid>/delete", methods=["POST"])
 @admin_required
 def event_delete(eid):
-    db.execute("delete from attendance where eid = %s", (eid,))  # 先に出欠を消す（外部キー）
+    # 先に紐づくデータを消す（外部キー）
+    db.execute("delete from attendance where eid = %s", (eid,))
+    db.execute("delete from goals where eid = %s", (eid,))
+    db.execute("delete from match_results where eid = %s", (eid,))
     db.execute("delete from events where eid = %s", (eid,))
     flash("予定を削除しました。", "success")
     return redirect(url_for("events"))
+
+
+# =========================================================
+# 試合結果・得点・スコア一覧
+# =========================================================
+
+def _match_result(eid):
+    """試合結果（なければ None）。MVP の名前も付けて返す"""
+    return db.query("""
+        select r.*, u.uname as mvp
+        from match_results r
+        left join users u on u.uid = r.mvp_uid
+        where r.eid = %s
+    """, (eid,), one=True)
+
+
+def _goals(eid):
+    """得点の一覧（前半→後半、時間順）。得点者・アシストの名前付き"""
+    return db.query("""
+        select g.*, s.uname as scorer, a.uname as assist
+        from goals g
+        left join users s on s.uid = g.scorer_uid
+        left join users a on a.uid = g.assist_uid
+        where g.eid = %s
+        order by g.half, coalesce(g.minute, 999), g.gid
+    """, (eid,))
+
+
+def _outcome(our, opp):
+    if our > opp:
+        return "win"
+    if our < opp:
+        return "loss"
+    return "draw"
+
+
+def _int_or(value, default=None):
+    """フォームの数値欄を int にする（空欄なら default）"""
+    value = (value or "").strip()
+    return int(value) if value.isdigit() else default
+
+
+@app.route("/events/<int:eid>/result", methods=["GET", "POST"])
+@admin_required
+def result_edit(eid):
+    """試合結果の入力・編集（スコア・MVP・メモ）。得点の追加は goal_add"""
+    ev = db.query("select * from events where eid = %s", (eid,), one=True)
+    if ev is None:
+        abort(404)
+    if ev["etype"] != "match":
+        flash("試合以外の予定には結果を入力できません。", "warning")
+        return redirect(url_for("event_detail", eid=eid))
+
+    if request.method == "POST":
+        f = request.form
+        db.execute("""
+            insert into match_results
+                (eid, our_1h, our_2h, opp_1h, opp_2h, our_pk, opp_pk, mvp_uid, memo, updated_at)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, current_timestamp)
+            on conflict (eid) do update
+              set our_1h = excluded.our_1h, our_2h = excluded.our_2h,
+                  opp_1h = excluded.opp_1h, opp_2h = excluded.opp_2h,
+                  our_pk = excluded.our_pk, opp_pk = excluded.opp_pk,
+                  mvp_uid = excluded.mvp_uid, memo = excluded.memo,
+                  updated_at = current_timestamp
+        """, (eid,
+              _int_or(f.get("our_1h"), 0), _int_or(f.get("our_2h"), 0),
+              _int_or(f.get("opp_1h"), 0), _int_or(f.get("opp_2h"), 0),
+              _int_or(f.get("our_pk")), _int_or(f.get("opp_pk")),
+              _int_or(f.get("mvp_uid")), f.get("memo", "").strip()))
+        flash("試合結果を保存しました。", "success")
+        return redirect(url_for("event_detail", eid=eid))
+
+    members = db.query("select uid, uname, number from users order by coalesce(number, 999), uname")
+    return render_template("result_form.html", title="試合結果の入力", ev=ev,
+                           result=_match_result(eid), goals=_goals(eid), members=members)
+
+
+@app.route("/events/<int:eid>/goals", methods=["POST"])
+@admin_required
+def goal_add(eid):
+    f = request.form
+    side = f.get("side") if f.get("side") in ("our", "opp") else "our"
+    half = _int_or(f.get("half"), 1)
+    if half not in HALVES:
+        half = 1
+    # 相手の得点には得点者・アシストを付けない
+    scorer_uid = _int_or(f.get("scorer_uid")) if side == "our" else None
+    assist_uid = _int_or(f.get("assist_uid")) if side == "our" else None
+    db.execute("""
+        insert into goals (eid, side, scorer_uid, assist_uid, half, minute, note)
+        values (%s, %s, %s, %s, %s, %s, %s)
+    """, (eid, side, scorer_uid, assist_uid, half, _int_or(f.get("minute")), f.get("note", "").strip()))
+    flash("得点を追加しました。", "success")
+    return redirect(url_for("result_edit", eid=eid))
+
+
+@app.route("/events/<int:eid>/goals/<int:gid>/delete", methods=["POST"])
+@admin_required
+def goal_delete(eid, gid):
+    db.execute("delete from goals where gid = %s and eid = %s", (gid, eid))
+    flash("得点を削除しました。", "success")
+    return redirect(url_for("result_edit", eid=eid))
+
+
+@app.route("/scores")
+@login_required
+def scores():
+    """試合結果の一覧。シーズン（タブ）と大会（絞り込み）で切り替える"""
+    seasons = [r["season"] for r in db.query("""
+        select distinct season from events
+        where etype = 'match' and season is not null and season <> ''
+        order by season desc
+    """)]
+    season = request.args.get("season") or (seasons[0] if seasons else config.CURRENT_SEASON)
+    competitions = [r["competition"] for r in db.query("""
+        select distinct competition from events
+        where etype = 'match' and season = %s and competition is not null and competition <> ''
+        order by competition
+    """, (season,))]
+    competition = request.args.get("competition", "")
+
+    sql = """
+        select e.eid, e.title, e.event_date, e.opponent, e.competition,
+               r.our_1h, r.our_2h, r.opp_1h, r.opp_2h, r.our_pk, r.opp_pk
+        from events e
+        join match_results r on r.eid = e.eid
+        where e.etype = 'match' and e.season = %s
+    """
+    params = [season]
+    if competition:
+        sql += " and e.competition = %s"
+        params.append(competition)
+    sql += " order by e.event_date desc"
+
+    matches = [dict(r) for r in db.query(sql, tuple(params))]   # dict にして計算結果を足す
+    summary = {"win": 0, "draw": 0, "loss": 0, "gf": 0, "ga": 0}
+    for m in matches:
+        m["our"] = m["our_1h"] + m["our_2h"]
+        m["opp"] = m["opp_1h"] + m["opp_2h"]
+        m["outcome"] = _outcome(m["our"], m["opp"])
+        summary[m["outcome"]] += 1
+        summary["gf"] += m["our"]
+        summary["ga"] += m["opp"]
+
+    return render_template("scores.html", title="スコア", matches=matches, summary=summary,
+                           seasons=seasons, season=season,
+                           competitions=competitions, competition=competition)
 
 
 # =========================================================

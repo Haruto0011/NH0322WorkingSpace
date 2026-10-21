@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1 class="h5 mb-3">スコア</h1>
+
+{# ---------- シーズン切り替え ---------- #}
+{% if seasons %}
+<ul class="nav nav-underline mb-3">
+  {% for s in seasons %}
+  <li class="nav-item">
+    <a class="nav-link {% if s == season %}active{% endif %}" href="{{ url_for('scores', season=s) }}">{{ s }}シーズン</a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{# ---------- 大会で絞り込み ---------- #}
+{% if competitions %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-sm {% if not competition %}btn-success{% else %}btn-outline-success{% endif %}"
+     href="{{ url_for('scores', season=season) }}">すべて</a>
+  {% for c in competitions %}
+  <a class="btn btn-sm {% if c == competition %}btn-success{% else %}btn-outline-success{% endif %}"
+     href="{{ url_for('scores', season=season, competition=c) }}">{{ c }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ---------- 成績まとめ ---------- #}
+<div class="card shadow-sm mb-3">
+  <div class="card-body py-3">
+    <div class="row text-center g-0">
+      <div class="col"><div class="summary-num text-success">{{ summary.win }}</div><small class="text-muted">勝ち</small></div>
+      <div class="col"><div class="summary-num text-secondary">{{ summary.draw }}</div><small class="text-muted">引き分け</small></div>
+      <div class="col"><div class="summary-num text-danger">{{ summary.loss }}</div><small class="text-muted">負け</small></div>
+      <div class="col border-start"><div class="summary-num">{{ summary.gf }}</div><small class="text-muted">得点</small></div>
+      <div class="col"><div class="summary-num">{{ summary.ga }}</div><small class="text-muted">失点</small></div>
+    </div>
+  </div>
+</div>
+
+{# ---------- 試合ごとの結果 ---------- #}
+{% if matches %}
+<div class="list-group shadow-sm">
+  {% for m in matches %}
+  <a href="{{ url_for('event_detail', eid=m.eid) }}" class="list-group-item list-group-item-action py-3">
+    <div class="text-center small text-muted mb-1">{{ m.event_date|jdate }}{% if m.competition %} ・ {{ m.competition }}{% endif %}</div>
+    <div class="d-flex align-items-center justify-content-center gap-3">
+      <div class="score-team text-end">{{ team_name }}</div>
+      <div class="score-num">{{ m.our }} <span class="text-muted">-</span> {{ m.opp }}</div>
+      <div class="score-team">{{ m.opponent or '相手' }}</div>
+    </div>
+    <div class="text-center mt-1">
+      <span class="badge {{ {'win': 'bg-success', 'draw': 'bg-secondary', 'loss': 'bg-danger'}[m.outcome] }}">{{ OUTCOMES[m.outcome] }}</span>
+      {% if m.our_pk is not none and m.opp_pk is not none %}<small class="text-muted">PK {{ m.our_pk }}-{{ m.opp_pk }}</small>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body text-muted">結果が入力された試合はまだありません。</div></div>
+{% endif %}
+
+{% endblock %}

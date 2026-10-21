@@ -32,8 +32,34 @@ create table if not exists events (
 create table if not exists attendance (
   eid        integer not null references events(eid),
   uid        integer not null references users(uid),
-  status     text not null,                   -- 'yes' / 'maybe' / 'no'
+  status     text not null,                   -- 'yes'(出席) / 'no'(欠席)。未回答は行がない
   comment    text,
   updated_at timestamp default current_timestamp,
   primary key (eid, uid)
+);
+
+-- 試合結果（1試合につき1行。前半/後半のスコア、PK戦、MVP）
+create table if not exists match_results (
+  eid        integer primary key references events(eid),
+  our_1h     integer not null default 0,    -- 自チーム 前半
+  our_2h     integer not null default 0,    -- 自チーム 後半
+  opp_1h     integer not null default 0,    -- 相手 前半
+  opp_2h     integer not null default 0,    -- 相手 後半
+  our_pk     integer,                       -- PK戦（なければ NULL）
+  opp_pk     integer,
+  mvp_uid    integer references users(uid),
+  memo       text,
+  updated_at timestamp default current_timestamp
+);
+
+-- 得点（1ゴール1行。相手の得点も side='opp' で記録する）
+create table if not exists goals (
+  gid        integer primary key autoincrement,
+  eid        integer not null references events(eid),
+  side       text not null,                 -- 'our' / 'opp'
+  scorer_uid integer references users(uid), -- 得点者（side='our' のとき）
+  assist_uid integer references users(uid), -- アシスト（任意）
+  half       integer not null default 1,    -- 1=前半 / 2=後半
+  minute     integer,                       -- その半分の中での分（任意）
+  note       text                           -- 'PK' 'オウンゴール' など
 );
