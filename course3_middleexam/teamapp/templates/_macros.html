@@ -6,28 +6,31 @@
 {%- endmacro %}
 
 {% macro status_badge(status) -%}
-{% if status == 'yes' %}<span class="badge bg-success">○ 参加</span>
-{% elif status == 'maybe' %}<span class="badge bg-warning text-dark">△ 未定</span>
-{% elif status == 'no' %}<span class="badge bg-secondary">× 欠席</span>
+{% if status == 'yes' %}<span class="badge bg-success">出席</span>
+{% elif status == 'no' %}<span class="badge bg-secondary">欠席</span>
 {% else %}<span class="badge bg-white text-muted border">未回答</span>{% endif %}
 {%- endmacro %}
 
-{# 予定一覧の1行（ホームと予定一覧で共通） #}
+{# 予定一覧の1行（ホームと予定一覧で共通）。中止の予定は打ち消し線 #}
 {% macro event_row(e) -%}
-<a href="{{ url_for('event_detail', eid=e.eid) }}" class="list-group-item list-group-item-action py-3">
+<a href="{{ url_for('event_detail', eid=e.eid) }}"
+   class="list-group-item list-group-item-action py-3 {% if e.cancelled %}event-cancelled{% endif %}">
   <div class="d-flex justify-content-between align-items-center gap-2">
     <div class="min-w-0">
       <div class="mb-1">
+        {% if e.cancelled %}<span class="badge bg-dark">中止</span>{% endif %}
         {{ etype_badge(e.etype) }}
-        <strong class="ms-1">{{ e.event_date|jdate }}</strong>
-        {% if e.start_time %}<span class="ms-1">{{ e.start_time|jtime }}{% if e.end_time %}〜{{ e.end_time|jtime }}{% endif %}</span>{% endif %}
+        <strong class="ms-1 strike">{{ e.event_date|jdate }}</strong>
+        {% if e.start_time %}<span class="ms-1 strike">{{ e.start_time|jtime }}{% if e.end_time %}〜{{ e.end_time|jtime }}{% endif %}</span>{% endif %}
       </div>
-      <div class="text-truncate">{{ e.title }}{% if e.place %} <small class="text-muted">@ {{ e.place }}</small>{% endif %}</div>
+      <div class="text-truncate strike">{{ e.title }}{% if e.place %} <small class="text-muted">@ {{ e.place }}</small>{% endif %}</div>
     </div>
+    {% if not e.cancelled %}
     <div class="text-end flex-shrink-0">
       {{ status_badge(e.my_status) }}
-      <div><small class="text-muted">参加 {{ e.yes_count }}人</small></div>
+      <div><small class="text-muted">出席 {{ e.yes_count }}人</small></div>
     </div>
+    {% endif %}
   </div>
 </a>
 {%- endmacro %}

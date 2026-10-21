@@ -1,17 +1,40 @@
 {% extends "layout.html" %}
-{% from "_macros.html" import etype_badge, status_badge with context %}
+{% from "_macros.html" import etype_badge with context %}
 {% block content %}
+
+{# メンバーを「チップ」で並べる部品（出席/欠席/未回答の各タブで使う） #}
+{% macro member_chips(list, empty_text) -%}
+  {% if list %}
+  <div class="d-flex flex-wrap gap-2">
+    {% for m in list %}
+    <div class="member-chip">
+      {% if m.number %}<span class="chip-number">{{ m.number }}</span>{% endif %}
+      <span>{{ m.uname }}</span>
+      {% if m.position %}<small class="text-muted">{{ m.position }}</small>{% endif %}
+      {% if m.comment %}<div class="chip-comment">💬 {{ m.comment }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted small mb-0">{{ empty_text }}</p>
+  {% endif %}
+{%- endmacro %}
 
 <a href="{{ url_for('events') }}" class="text-decoration-none small">&larr; 予定一覧</a>
 
+{% if ev.cancelled %}
+<div class="alert alert-dark py-2 my-2 mb-0"><strong>この予定は中止になりました。</strong></div>
+{% endif %}
+
 {# ---------- 予定の情報 ---------- #}
-<div class="card shadow-sm my-2">
+<div class="card shadow-sm my-2 {% if ev.cancelled %}event-cancelled{% endif %}">
   <div class="card-body">
+    {% if ev.cancelled %}<span class="badge bg-dark">中止</span>{% endif %}
     {{ etype_badge(ev.etype) }}
-    <h1 class="h4 mt-2">{{ ev.title }}</h1>
+    <h1 class="h4 mt-2 strike">{{ ev.title }}</h1>
     <dl class="row mb-0">
       <dt class="col-4 col-sm-3 fw-normal text-muted">日時</dt>
-      <dd class="col-8 col-sm-9">
+      <dd class="col-8 col-sm-9 strike">
         {{ ev.event_date|jdate }}
         {% if ev.start_time %}{{ ev.start_time|jtime }}{% if ev.end_time %}〜{{ ev.end_time|jtime }}{% endif %}{% endif %}
       </dd>
@@ -25,11 +48,19 @@
       <dt class="col-4 col-sm-3 fw-normal text-muted">メモ</dt><dd class="col-8 col-sm-9 pre-line">{{ ev.note }}</dd>
       {% endif %}
     </dl>
+    {% if ev.creator %}<div class="small text-muted mt-2">作成: {{ ev.creator }}</div>{% endif %}
 
     {% if g.user.role == 'admin' %}
     <div class="d-flex gap-2 mt-3">
       <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('event_edit', eid=ev.eid) }}">編集</a>
-      <form method="post" action="{{ url_for('event_delete', eid=ev.eid) }}"
+      <form method="post" action="{{ url_for('event_cancel', eid=ev.eid) }}">
+        {% if ev.cancelled %}
+        <button class="btn btn-sm btn-outline-success">中止を取り消す</button>
+        {% else %}
+        <button class="btn btn-sm btn-outline-dark" onclick="return confirm('この予定を中止にしますか？');">中止にする</button>
+        {% endif %}
+      </form>
+      <form method="post" action="{{ url_for('event_delete', eid=ev.eid) }}" class="ms-auto"
             onsubmit="return confirm('この予定を削除しますか？（出欠も消えます）');">
         <button class="btn btn-sm btn-outline-danger">削除</button>
       </form>
@@ -38,7 +69,8 @@
   </div>
 </div>
 
-{# ---------- 自分の出欠 ---------- #}
+{# ---------- 自分の出欠（中止のときは出さない） ---------- #}
+{% if not ev.cancelled %}
 <div class="card shadow-sm mb-2">
   <div class="card-body">
     <h2 class="h6">あなたの出欠</h2>
@@ -47,7 +79,7 @@
         {% for key, label in STATUSES.items() %}
         <input type="radio" class="btn-check" name="status" id="st-{{ key }}" value="{{ key }}"
                {% if mine and mine.status == key %}checked{% endif %}>
-        <label class="btn btn-outline-{{ {'yes': 'success', 'maybe': 'warning', 'no': 'secondary'}[key] }}"
+        <label class="btn btn-lg btn-outline-{{ 'success' if key == 'yes' else 'secondary' }}"
                for="st-{{ key }}">{{ label }}</label>
         {% endfor %}
       </div>
@@ -57,28 +89,34 @@
     </form>
   </div>
 </div>
+{% endif %}
 
-{# ---------- みんなの出欠 ---------- #}
+{# ---------- みんなの出欠：出席 / 欠席 / 未回答 のタブ ---------- #}
 <div class="card shadow-sm">
   <div class="card-body">
-    <h2 class="h6 d-flex align-items-center gap-2">
-      みんなの出欠
-      <span class="badge bg-success">○ {{ counts.yes }}</span>
-      <span class="badge bg-warning text-dark">△ {{ counts.maybe }}</span>
-      <span class="badge bg-secondary">× {{ counts.no }}</span>
-    </h2>
-    <ul class="list-group list-group-flush">
-      {% for m in members %}
-      <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-        <div>
-          {% if m.number %}<span class="text-muted me-1">#{{ m.number }}</span>{% endif %}{{ m.uname }}
-          {% if m.position %}<small class="text-muted">({{ m.position }})</small>{% endif %}
-          {% if m.comment %}<div class="small text-muted">💬 {{ m.comment }}</div>{% endif %}
-        </div>
-        {{ status_badge(m.status) }}
+    <h2 class="h6 mb-2">みんなの出欠</h2>
+    <ul class="nav nav-pills nav-fill att-tabs mb-3" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-yes" type="button" role="tab">
+          <div class="att-count text-success">{{ counts.yes }}</div><small>出席</small>
+        </button>
       </li>
-      {% endfor %}
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-no" type="button" role="tab">
+          <div class="att-count text-secondary">{{ counts.no }}</div><small>欠席</small>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-none" type="button" role="tab">
+          <div class="att-count text-danger">{{ counts.none }}</div><small>未回答</small>
+        </button>
+      </li>
     </ul>
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tab-yes" role="tabpanel">{{ member_chips(groups.yes, "まだ誰も出席と回答していません。") }}</div>
+      <div class="tab-pane fade" id="tab-no" role="tabpanel">{{ member_chips(groups.no, "欠席の回答はありません。") }}</div>
+      <div class="tab-pane fade" id="tab-none" role="tabpanel">{{ member_chips(groups.none, "全員回答済みです 🎉") }}</div>
+    </div>
   </div>
 </div>
 

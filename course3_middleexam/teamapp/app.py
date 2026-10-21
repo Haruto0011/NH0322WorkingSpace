@@ -29,7 +29,7 @@ db.init_app(app)
 # 画面で使う選択肢。ここを変えれば全画面に反映される
 ETYPES = {"practice": "練習", "match": "試合", "other": "その他"}
 POSITIONS = ["GK", "DF", "MF", "FW"]
-STATUSES = {"yes": "○ 参加", "maybe": "△ 未定", "no": "× 欠席"}
+STATUSES = {"yes": "出席", "no": "欠席"}   # 回答していない人は「未回答」扱い
 WEEKDAYS = "月火水木金土日"
 
 
@@ -207,7 +207,13 @@ def events():
 @app.route("/events/<int:eid>")
 @login_required
 def event_detail(eid):
-    ev = db.query("select * from events where eid = %s", (eid,), one=True)
+    # 予定 ＋ 作成者の名前
+    ev = db.query("""
+        select e.*, u.uname as creator
+        from events e
+        left join users u on u.uid = e.created_by
+        where e.eid = %s
+    """, (eid,), one=True)
     if ev is None:
         abort(404)
 
@@ -219,16 +225,18 @@ def event_detail(eid):
         order by coalesce(u.number, 999), u.uname
     """, (eid,))
 
-    counts = {"yes": 0, "maybe": 0, "no": 0}
+    # 出席 / 欠席 / 未回答 の3グループに分ける
+    groups = {"yes": [], "no": [], "none": []}
     mine = None
     for m in members:
-        if m["status"] in counts:
-            counts[m["status"]] += 1
+        key = m["status"] if m["status"] in STATUSES else "none"
+        groups[key].append(m)
         if m["uid"] == g.user["uid"]:
             mine = m
+    counts = {key: len(lst) for key, lst in groups.items()}
 
     return render_template("event_detail.html", title=ev["title"],
-                           ev=ev, members=members, counts=counts, mine=mine)
+                           ev=ev, groups=groups, counts=counts, mine=mine)
 
 
 @app.route("/events/<int:eid>/attend", methods=["POST"])
@@ -238,6 +246,13 @@ def attend(eid):
     comment = request.form.get("comment", "").strip()
     if status not in STATUSES:
         flash("出欠を選んでください。", "danger")
+        return redirect(url_for("event_detail", eid=eid))
+
+    ev = db.query("select cancelled from events where eid = %s", (eid,), one=True)
+    if ev is None:
+        abort(404)
+    if ev["cancelled"]:
+        flash("この予定は中止になっています。", "warning")
         return redirect(url_for("event_detail", eid=eid))
 
     # 未回答なら insert、回答済みなら update（UPSERT）
@@ -312,6 +327,19 @@ def event_edit(eid):
         flash("予定を更新しました。", "success")
         return redirect(url_for("event_detail", eid=eid))
     return render_template("event_form.html", title="予定を編集", ev=ev)
+
+
+@app.route("/events/<int:eid>/cancel", methods=["POST"])
+@admin_required
+def event_cancel(eid):
+    """中止 ⇔ 中止取り消し を切り替える（予定自体は消さない）"""
+    ev = db.query("select cancelled from events where eid = %s", (eid,), one=True)
+    if ev is None:
+        abort(404)
+    new_value = 0 if ev["cancelled"] else 1
+    db.execute("update events set cancelled = %s where eid = %s", (new_value, eid))
+    flash("予定を中止にしました。" if new_value else "中止を取り消しました。", "success")
+    return redirect(url_for("event_detail", eid=eid))
 
 
 @app.route("/events/<int:eid>/delete", methods=["POST"])

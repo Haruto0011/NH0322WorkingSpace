@@ -23,7 +23,8 @@ create table if not exists events (
   place      text,
   opponent   text,                            -- 試合のときだけ
   note       text,
-  created_by integer references users(uid)
+  created_by integer references users(uid),
+  cancelled  integer not null default 0     -- 1 なら中止
 );
 
 -- 出欠：1人1予定につき1行（eid, uid の組み合わせがキー）

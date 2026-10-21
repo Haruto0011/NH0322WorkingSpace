@@ -26,3 +26,58 @@ body {
 .list-group-item-action:hover {
   background-color: #f1f8f4;
 }
+
+/* ---------- 中止になった予定：打ち消し線＋薄く ---------- */
+.event-cancelled {
+  opacity: .65;
+}
+.event-cancelled .strike {
+  text-decoration: line-through;
+}
+
+/* ---------- 出欠タブ（出席 / 欠席 / 未回答） ---------- */
+.att-tabs .nav-link {
+  color: #495057;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: .5rem .25rem;
+}
+.att-tabs .nav-link.active {
+  color: #212529;
+  background: #fff;
+  border-color: #198754;
+  box-shadow: inset 0 -3px 0 #198754;
+}
+.att-count {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* メンバーの「チップ」表示（大人数でも横に詰めて並ぶ） */
+.member-chip {
+  display: inline-block;
+  padding: .3rem .6rem;
+  border: 1px solid #dee2e6;
+  border-radius: 1rem;
+  background: #fff;
+  font-size: .9rem;
+  line-height: 1.3;
+}
+.member-chip .chip-number {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: .25em;
+  padding: 0 .3em;
+  border-radius: .5em;
+  background: #198754;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: bold;
+  text-align: center;
+}
+.member-chip .chip-comment {
+  font-size: .75rem;
+  color: #6c757d;
+}

@@ -57,12 +57,12 @@ uids = [r["uid"] for r in cur.fetchall()]
 cur.execute(q("select eid from events order by eid"))
 eids = [r["eid"] for r in cur.fetchall()]
 
-pattern = ["yes", "yes", "maybe", "no", "yes", None]  # 6人分
+pattern = ["yes", "yes", "no", "yes", None, "yes"]  # 6人分（None は未回答）
 for i, eid in enumerate(eids[:3]):
     for j, uid in enumerate(uids):
         status = pattern[(i + j) % len(pattern)]
         if status:
-            comment = "少し遅れます" if status == "maybe" else ""
+            comment = "少し遅れます" if (i + j) % 4 == 0 else ""
             cur.execute(q("insert into attendance (eid, uid, status, comment) values (%s, %s, %s, %s)"),
                         (eid, uid, status, comment))
 
