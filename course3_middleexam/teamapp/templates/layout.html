@@ -22,6 +22,7 @@
         {% if g.user %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('events') }}">予定</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('scores') }}">スコア</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('stats') }}">スタッツ</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('members') }}">メンバー</a></li>
         {% if g.user.role == 'admin' %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('event_new') }}">＋ 予定を追加</a></li>

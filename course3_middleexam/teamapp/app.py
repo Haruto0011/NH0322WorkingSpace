@@ -587,6 +587,118 @@ def scores():
 
 
 # =========================================================
+# スタッツ（選手ランキング・チーム成績）
+# =========================================================
+
+def _scope_filter(season, competition):
+    """集計範囲を SQL の条件にする（events の別名は e）。season が None なら通算"""
+    sql, params = "", []
+    if season:
+        sql += " and e.season = %s"
+        params.append(season)
+        if competition:
+            sql += " and e.competition = %s"
+            params.append(competition)
+    return sql, params
+
+
+def _ranked(rows):
+    """count の降順に並んだ行に順位を付ける。同数は同じ順位（1,2,2,4 のように）"""
+    out, prev, rank = [], None, 0
+    for i, r in enumerate(rows, 1):
+        if r["n"] != prev:
+            rank, prev = i, r["n"]
+        d = dict(r)
+        d["rank"] = rank
+        out.append(d)
+    return out
+
+
+@app.route("/stats")
+@login_required
+def stats():
+    # ---- 集計範囲（シーズン / 大会 / 通算）----
+    seasons = [r["season"] for r in db.query(
+        "select distinct season from events where season is not null and season <> '' order by season desc")]
+    if config.CURRENT_SEASON not in seasons:
+        seasons.insert(0, config.CURRENT_SEASON)
+    season = request.args.get("season") or seasons[0]
+    if season == "all":            # 通算
+        season = None
+    competition = request.args.get("competition", "") if season else ""
+    competitions = []
+    if season:
+        competitions = [r["competition"] for r in db.query("""
+            select distinct competition from events
+            where etype = 'match' and season = %s and competition is not null and competition <> ''
+            order by competition
+        """, (season,))]
+
+    scope, params = _scope_filter(season, competition)
+    today = date.today().isoformat()
+
+    # ---- 選手ランキング ----
+    # 得点（自チームの得点のみ）
+    goals = _ranked(db.query(f"""
+        select u.uid, u.uname, u.number, count(*) as n
+        from goals g
+        join events e on e.eid = g.eid
+        join users u on u.uid = g.scorer_uid
+        where g.side = 'our' {scope}
+        group by u.uid, u.uname, u.number
+        order by n desc, u.uname
+    """, tuple(params)))
+    assists = _ranked(db.query(f"""
+        select u.uid, u.uname, u.number, count(*) as n
+        from goals g
+        join events e on e.eid = g.eid
+        join users u on u.uid = g.assist_uid
+        where g.side = 'our' {scope}
+        group by u.uid, u.uname, u.number
+        order by n desc, u.uname
+    """, tuple(params)))
+    mvps = _ranked(db.query(f"""
+        select u.uid, u.uname, u.number, count(*) as n
+        from match_results r
+        join events e on e.eid = r.eid
+        join users u on u.uid = r.mvp_uid
+        where 1 = 1 {scope}
+        group by u.uid, u.uname, u.number
+        order by n desc, u.uname
+    """, tuple(params)))
+    # 出席：終わった予定（中止を除く）に「出席」と答えた回数。held はその予定の総数（出席率の分母）
+    held = db.query(f"""
+        select count(*) as c from events e
+        where e.cancelled = 0 and e.event_date <= %s {scope}
+    """, (today, *params), one=True)["c"]
+    attendance = _ranked(db.query(f"""
+        select u.uid, u.uname, u.number, count(*) as n
+        from attendance a
+        join events e on e.eid = a.eid
+        join users u on u.uid = a.uid
+        where a.status = 'yes' and e.cancelled = 0 and e.event_date <= %s {scope}
+        group by u.uid, u.uname, u.number
+        order by n desc, u.uname
+    """, (today, *params)))
+
+    # ---- チーム成績 ----
+    _, team = _match_list(season=season, competition=competition)
+
+    # ---- 自分の成績 ----
+    uid = g.user["uid"]
+    mine = {}
+    for key, rows in (("goals", goals), ("assists", assists), ("mvps", mvps), ("attendance", attendance)):
+        mine[key] = next((r["n"] for r in rows if r["uid"] == uid), 0)
+    mine["rate"] = round(100 * mine["attendance"] / held) if held else None
+
+    return render_template("stats.html", title="スタッツ",
+                           seasons=seasons, season=season,
+                           competitions=competitions, competition=competition,
+                           goals=goals, assists=assists, mvps=mvps, attendance=attendance,
+                           held=held, team=team, mine=mine)
+
+
+# =========================================================
 # メンバー・プロフィール
 # =========================================================
 

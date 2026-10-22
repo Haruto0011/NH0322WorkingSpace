@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+{% block content %}
+
+{# ランキング1枚分の部品。上位5人を表示し、残りは「すべて見る」で開く #}
+{% macro ranking(title, rows, unit, cid, rate_base=None) -%}
+<div class="card shadow-sm h-100">
+  <div class="card-body">
+    <h3 class="h6 d-flex justify-content-between align-items-baseline">
+      <span>{{ title }}</span>
+      {% if rows %}<small class="text-muted">{{ rows|length }}人</small>{% endif %}
+    </h3>
+    {% if rows %}
+    <ol class="list-unstyled mb-0 ranking">
+      {% for r in rows %}
+      <li class="py-1 {% if loop.index > 5 %}collapse rank-more-{{ cid }}{% endif %} {% if r.uid == g.user.uid %}me{% endif %}">
+        <span class="rank {% if r.rank == 1 %}rank-1{% elif r.rank == 2 %}rank-2{% elif r.rank == 3 %}rank-3{% endif %}">{{ r.rank }}</span>
+        <span class="flex-grow-1 text-truncate">{% if r.number %}<span class="text-muted small">#{{ r.number }}</span> {% endif %}{{ r.uname }}</span>
+        <span class="fw-bold">{{ r.n }}<small class="fw-normal text-muted">{{ unit }}</small></span>
+        {% if rate_base %}<small class="text-muted rate">{{ (100 * r.n / rate_base)|round|int }}%</small>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% if rows|length > 5 %}
+    <button class="btn btn-link btn-sm p-0 mt-1" type="button" data-bs-toggle="collapse" data-bs-target=".rank-more-{{ cid }}">すべて見る</button>
+    {% endif %}
+    {% else %}
+    <p class="text-muted small mb-0">まだ記録がありません。</p>
+    {% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+<h1 class="h5 mb-3">スタッツ</h1>
+
+{# ---------- シーズン / 通算 ---------- #}
+<ul class="nav nav-underline mb-3">
+  {% for s in seasons %}
+  <li class="nav-item">
+    <a class="nav-link {% if s == season %}active{% endif %}" href="{{ url_for('stats', season=s) }}">{{ s }}シーズン</a>
+  </li>
+  {% endfor %}
+  <li class="nav-item">
+    <a class="nav-link {% if not season %}active{% endif %}" href="{{ url_for('stats', season='all') }}">通算</a>
+  </li>
+</ul>
+
+{# ---------- 大会で絞り込み（シーズン選択時のみ） ---------- #}
+{% if competitions %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-sm {% if not competition %}btn-success{% else %}btn-outline-success{% endif %}"
+     href="{{ url_for('stats', season=season) }}">すべて</a>
+  {% for c in competitions %}
+  <a class="btn btn-sm {% if c == competition %}btn-success{% else %}btn-outline-success{% endif %}"
+     href="{{ url_for('stats', season=season, competition=c) }}">{{ c }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ---------- あなたの成績 ---------- #}
+<div class="card shadow-sm mb-3 border-success">
+  <div class="card-body py-3">
+    <h2 class="h6 text-muted">あなたの成績</h2>
+    <div class="row text-center g-0">
+      <div class="col"><div class="summary-num">{{ mine.goals }}</div><small class="text-muted">得点</small></div>
+      <div class="col"><div class="summary-num">{{ mine.assists }}</div><small class="text-muted">アシスト</small></div>
+      <div class="col"><div class="summary-num">{{ mine.mvps }}</div><small class="text-muted">MVP</small></div>
+      <div class="col border-start">
+        <div class="summary-num">{{ mine.attendance }}<small class="fs-6 fw-normal text-muted">/{{ held }}</small></div>
+        <small class="text-muted">出席{% if mine.rate is not none %}（{{ mine.rate }}%）{% endif %}</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ---------- チーム成績 ---------- #}
+<div class="card shadow-sm mb-3">
+  <div class="card-body py-3">
+    <h2 class="h6 text-muted d-flex justify-content-between">
+      <span>チーム成績 <small>({{ team.games }}試合)</small></span>
+      <a href="{{ url_for('scores', season=season) if season else url_for('scores') }}" class="small text-decoration-none">スコア一覧 &rsaquo;</a>
+    </h2>
+    <div class="row text-center g-0">
+      <div class="col"><div class="summary-num text-success">{{ team.win }}</div><small class="text-muted">勝ち</small></div>
+      <div class="col"><div class="summary-num text-secondary">{{ team.draw }}</div><small class="text-muted">引き分け</small></div>
+      <div class="col"><div class="summary-num text-danger">{{ team.loss }}</div><small class="text-muted">負け</small></div>
+      <div class="col border-start"><div class="summary-num">{{ team.gf }}</div><small class="text-muted">得点</small></div>
+      <div class="col"><div class="summary-num">{{ team.ga }}</div><small class="text-muted">失点</small></div>
+    </div>
+  </div>
+</div>
+
+{# ---------- 選手ランキング ---------- #}
+<h2 class="h6 text-muted mb-2">選手ランキング</h2>
+<div class="row g-3">
+  <div class="col-12 col-md-6">{{ ranking("⚽ 得点", goals, "点", "goals") }}</div>
+  <div class="col-12 col-md-6">{{ ranking("🎯 アシスト", assists, "", "assists") }}</div>
+  <div class="col-12 col-md-6">{{ ranking("🏅 MVP", mvps, "回", "mvps") }}</div>
+  <div class="col-12 col-md-6">{{ ranking("✅ 出席", attendance, "回", "att", rate_base=held) }}</div>
+</div>
+<p class="small text-muted mt-2 mb-0">出席は、終わった予定（中止を除く {{ held }}件）に「出席」と回答した回数。</p>
+
+{% endblock %}

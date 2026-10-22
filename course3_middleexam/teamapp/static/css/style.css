@@ -140,3 +140,38 @@ body {
   margin-right: .4em;
   vertical-align: middle;
 }
+
+/* ---------- スタッツ：ランキング ---------- */
+/* 行は flex で並べる（Bootstrap の d-flex だと !important が付いて折りたたみ(collapse)が効かなくなるため自前で） */
+.ranking li {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.ranking .rank {
+  display: inline-block;
+  width: 1.7em;
+  height: 1.7em;
+  line-height: 1.7em;
+  border-radius: 50%;
+  background: #e9ecef;
+  color: #495057;
+  font-size: .8rem;
+  font-weight: 700;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ranking .rank-1 { background: #ffc107; color: #212529; }   /* 金 */
+.ranking .rank-2 { background: #adb5bd; color: #fff; }      /* 銀 */
+.ranking .rank-3 { background: #cd7f32; color: #fff; }      /* 銅 */
+.ranking .rate {
+  width: 3em;
+  text-align: right;
+}
+.ranking li.me {
+  background: #f1f8f4;        /* 自分の行をうっすら緑に */
+  margin: 0 -.5rem;
+  padding-left: .5rem !important;
+  padding-right: .5rem !important;
+  border-radius: .3rem;
+}
