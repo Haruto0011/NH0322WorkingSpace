@@ -7,15 +7,90 @@
   {% if g.user.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}
 </div>
 
-<h2 class="h6 text-muted mb-2">直近の予定</h2>
+{# ---------- 未回答の予定があれば目立たせる ---------- #}
+{% if pending %}
+<a href="{{ url_for('events') }}" class="alert alert-warning d-flex justify-content-between align-items-center text-decoration-none py-2">
+  <span>📣 出欠がまだの予定が <strong>{{ pending }}件</strong> あります</span>
+  <span class="small text-nowrap ms-2">回答する &rsaquo;</span>
+</a>
+{% endif %}
+
+{# ---------- 直近の予定 ---------- #}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h6 text-muted mb-0">直近の予定</h2>
+  {% if g.user.role == 'admin' %}
+  <a href="{{ url_for('event_new') }}" class="btn btn-success btn-sm">＋ 予定を追加</a>
+  {% endif %}
+</div>
 {% if events %}
-<div class="list-group shadow-sm mb-3">
+<div class="list-group shadow-sm mb-2">
   {% for e in events %}{{ event_row(e) }}{% endfor %}
 </div>
 {% else %}
-<div class="card mb-3"><div class="card-body text-muted">今後の予定はありません。</div></div>
+<div class="card mb-2"><div class="card-body text-muted">今後の予定はありません。</div></div>
 {% endif %}
+<a href="{{ url_for('events') }}" class="btn btn-outline-success btn-sm w-100 mb-4">すべての予定を見る</a>
 
-<a href="{{ url_for('events') }}" class="btn btn-outline-success w-100">すべての予定を見る</a>
+<div class="row g-3">
+  {# ---------- 最新の試合結果 ---------- #}
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">最新の試合結果</h2>
+        {% if latest %}
+        <a href="{{ url_for('event_detail', eid=latest.eid) }}" class="text-decoration-none text-body d-block">
+          <div class="text-center small text-muted">{{ latest.event_date|jdate }}{% if latest.competition %} ・ {{ latest.competition }}{% endif %}</div>
+          <div class="d-flex align-items-center justify-content-center gap-3 my-2">
+            <div class="score-team text-end">{{ team_name }}</div>
+            <div class="score-num">{{ latest.our }} <span class="text-muted">-</span> {{ latest.opp }}</div>
+            <div class="score-team">{{ latest.opponent or '相手' }}</div>
+          </div>
+          <div class="text-center">
+            <span class="badge {{ {'win': 'bg-success', 'draw': 'bg-secondary', 'loss': 'bg-danger'}[latest.outcome] }}">{{ OUTCOMES[latest.outcome] }}</span>
+            {% if latest.our_pk is not none and latest.opp_pk is not none %}<small class="text-muted">PK {{ latest.our_pk }}-{{ latest.opp_pk }}</small>{% endif %}
+          </div>
+        </a>
+        {% else %}
+        <p class="text-muted small mb-0">まだ試合結果がありません。</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- 今シーズンの成績（ドーナツグラフ） ---------- #}
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted d-flex justify-content-between">
+          <span>{{ season }}シーズン</span>
+          <a href="{{ url_for('scores') }}" class="small text-decoration-none">スコア一覧 &rsaquo;</a>
+        </h2>
+        <div class="d-flex align-items-center gap-3">
+          {# SVG で描くドーナツ。円周をなぞる線を stroke-dasharray で区切って3色に分ける #}
+          <svg viewBox="0 0 100 100" class="donut" role="img" aria-label="勝敗グラフ">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#e9ecef" stroke-width="12"/>
+            {% for s in donut %}
+            <circle cx="50" cy="50" r="40" fill="none" stroke="{{ s.color }}" stroke-width="12"
+                    stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"
+                    transform="rotate(-90 50 50)"/>
+            {% endfor %}
+            <text x="50" y="47" text-anchor="middle" class="donut-num">{{ summary.games }}</text>
+            <text x="50" y="62" text-anchor="middle" class="donut-label">試合</text>
+          </svg>
+          <table class="table table-sm table-borderless mb-0 record">
+            <tr><td><span class="dot" style="background:#198754"></span>勝ち</td><td class="text-end fw-bold">{{ summary.win }}</td></tr>
+            <tr><td><span class="dot" style="background:#adb5bd"></span>引き分け</td><td class="text-end fw-bold">{{ summary.draw }}</td></tr>
+            <tr><td><span class="dot" style="background:#dc3545"></span>負け</td><td class="text-end fw-bold">{{ summary.loss }}</td></tr>
+            <tr class="border-top"><td class="pt-2">得点 / 失点</td><td class="text-end pt-2">{{ summary.gf }} / {{ summary.ga }}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="text-center small text-muted mt-4">
+  メンバー {{ member_count }}人 ・ <a href="{{ url_for('members') }}" class="text-decoration-none">メンバー一覧</a>
+</div>
 
 {% endblock %}

@@ -11,6 +11,7 @@ DBアクセスは db.py にまとめてある（SQL は PostgreSQL / SQLite 両�
 リンクはすべて url_for() で作る。サーバでは /s0000001/ のような
 サブパスにデプロイされるので、"/events" と直書きすると壊れるため。
 """
+import math
 from datetime import date, timedelta
 from functools import wraps
 
@@ -188,10 +189,30 @@ from events e
 @login_required
 def index():
     today = date.today().isoformat()
+    uid = g.user["uid"]
+
+    # 直近の予定（5件）
     events = db.query(
         EVENT_LIST_SQL + " where e.event_date >= %s order by e.event_date, e.start_time limit 5",
-        (g.user["uid"], today))
-    return render_template("index.html", title="ホーム", events=events)
+        (uid, today))
+
+    # 自分がまだ出欠を答えていない今後の予定の数（中止は除く）
+    pending = db.query("""
+        select count(*) as c from events e
+        where e.event_date >= %s and e.cancelled = 0
+          and not exists (select 1 from attendance a where a.eid = e.eid and a.uid = %s)
+    """, (today, uid), one=True)["c"]
+
+    # 最新の試合結果（1件）と、今シーズンの成績
+    latest_list, _ = _match_list(limit=1)
+    latest = latest_list[0] if latest_list else None
+    _, summary = _match_list(season=config.CURRENT_SEASON)
+
+    member_count = db.query("select count(*) as c from users", one=True)["c"]
+
+    return render_template("index.html", title="ホーム", events=events, pending=pending,
+                           latest=latest, summary=summary, donut=_donut(summary),
+                           season=config.CURRENT_SEASON, member_count=member_count)
 
 
 @app.route("/events")
@@ -422,6 +443,62 @@ def _int_or(value, default=None):
     return int(value) if value.isdigit() else default
 
 
+def _match_list(season=None, competition=None, limit=None):
+    """結果が入力済みの試合の一覧（新しい順）と、勝敗・得失点のまとめ。
+    ホーム（最新1件・今シーズン成績）とスコア一覧の両方で使う"""
+    sql = """
+        select e.eid, e.title, e.event_date, e.opponent, e.competition, e.season,
+               r.our_1h, r.our_2h, r.opp_1h, r.opp_2h, r.our_pk, r.opp_pk
+        from events e
+        join match_results r on r.eid = e.eid
+        where e.etype = 'match'
+    """
+    params = []
+    if season:
+        sql += " and e.season = %s"
+        params.append(season)
+    if competition:
+        sql += " and e.competition = %s"
+        params.append(competition)
+    sql += " order by e.event_date desc"
+    if limit:
+        sql += " limit %s"
+        params.append(limit)
+
+    matches = [dict(r) for r in db.query(sql, tuple(params))]   # dict にして計算結果を足す
+    summary = {"win": 0, "draw": 0, "loss": 0, "gf": 0, "ga": 0, "games": 0}
+    for m in matches:
+        m["our"] = m["our_1h"] + m["our_2h"]
+        m["opp"] = m["opp_1h"] + m["opp_2h"]
+        m["outcome"] = _outcome(m["our"], m["opp"])
+        summary[m["outcome"]] += 1
+        summary["gf"] += m["our"]
+        summary["ga"] += m["opp"]
+        summary["games"] += 1
+    return matches, summary
+
+
+DONUT_R = 40                       # ドーナツグラフの半径（SVGの座標）
+DONUT_C = 2 * math.pi * DONUT_R    # 円周
+
+
+def _donut(summary):
+    """勝ち/引き分け/負け をドーナツグラフにするための円弧の長さを計算する。
+    SVG の stroke-dasharray（線の長さ, 空白の長さ）と stroke-dashoffset（開始位置）に渡す"""
+    total = summary["games"]
+    segments = []
+    offset = 0.0
+    for key, color in (("win", "#198754"), ("draw", "#adb5bd"), ("loss", "#dc3545")):
+        n = summary[key]
+        if total and n:
+            length = DONUT_C * n / total
+            segments.append({"color": color,
+                             "dash": f"{length:.2f} {DONUT_C - length:.2f}",
+                             "offset": f"{-offset:.2f}"})
+            offset += length
+    return segments
+
+
 @app.route("/events/<int:eid>/result", methods=["GET", "POST"])
 @admin_required
 def result_edit(eid):
@@ -502,28 +579,7 @@ def scores():
     """, (season,))]
     competition = request.args.get("competition", "")
 
-    sql = """
-        select e.eid, e.title, e.event_date, e.opponent, e.competition,
-               r.our_1h, r.our_2h, r.opp_1h, r.opp_2h, r.our_pk, r.opp_pk
-        from events e
-        join match_results r on r.eid = e.eid
-        where e.etype = 'match' and e.season = %s
-    """
-    params = [season]
-    if competition:
-        sql += " and e.competition = %s"
-        params.append(competition)
-    sql += " order by e.event_date desc"
-
-    matches = [dict(r) for r in db.query(sql, tuple(params))]   # dict にして計算結果を足す
-    summary = {"win": 0, "draw": 0, "loss": 0, "gf": 0, "ga": 0}
-    for m in matches:
-        m["our"] = m["our_1h"] + m["our_2h"]
-        m["opp"] = m["opp_1h"] + m["opp_2h"]
-        m["outcome"] = _outcome(m["our"], m["opp"])
-        summary[m["outcome"]] += 1
-        summary["gf"] += m["our"]
-        summary["ga"] += m["opp"]
+    matches, summary = _match_list(season=season, competition=competition)
 
     return render_template("scores.html", title="スコア", matches=matches, summary=summary,
                            seasons=seasons, season=season,

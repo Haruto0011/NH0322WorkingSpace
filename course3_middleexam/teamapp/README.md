@@ -26,8 +26,9 @@ teamapp/
 ├── app.py               Flask本体（ルート＝URLごとの処理）
 ├── db.py                DBアクセス（SQLite/PostgreSQLの差を吸収）
 ├── config.py            設定（チーム名・DB・鍵）
-├── init_db.py           テーブル作成
+├── init_db.py           テーブル作成・更新（何度実行してもOK）
 ├── seed.py              お試しデータ
+├── make_admin.py        指定したメールのユーザを管理者にする
 ├── schema_sqlite.sql    テーブル定義（手元用）
 ├── schema_postgres.sql  テーブル定義（サーバ用）
 ├── flask.wsgi           サーバ用（講義資料の wsgi と同じ役割）
@@ -36,17 +37,27 @@ teamapp/
 │   ├── _macros.html     使い回す部品（バッジ・予定の行）
 │   ├── index.html       ホーム
 │   ├── events.html      予定一覧
-│   ├── event_detail.html 予定詳細・出欠回答
+│   ├── event_detail.html 予定詳細・出欠回答・試合結果
 │   ├── event_form.html  予定の追加/編集（管理者）
+│   ├── result_form.html 試合結果の入力（管理者）
+│   ├── scores.html      スコア一覧
 │   ├── members.html     メンバー一覧
 │   ├── profile.html     プロフィール編集
 │   ├── login.html / regist.html
-└── static/css/style.css
+└── static/
+    ├── css/bootstrap.min.css, js/bootstrap.bundle.min.js   Bootstrap 5.3.3（同梱）
+    └── css/style.css    サイト独自のスタイル
+```
+
+## 自分を管理者にする
+
+```bash
+python make_admin.py 登録したメールアドレス
 ```
 
 ## サーバ(muds.gdl.jp)にデプロイするとき
 
 1. `config.py` を直す: `DB_KIND = "postgres"`, `POSTGRES_DSN` を自分のもの, `FORCE_HTTPS = True`
-2. サーバに ssh して psql で `schema_postgres.sql` を実行
+2. サーバ上で `python init_db.py`（テーブル作成。`psycopg2-binary` のインストールが必要）
 3. Cyberduck で `teamapp/` フォルダごとアップロード（`.venv` と `team.db` は不要）
 4. 講義資料どおり、`flask.wsgi` のパスを石橋先生へ申請
