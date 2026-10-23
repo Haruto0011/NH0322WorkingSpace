@@ -2,44 +2,59 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{{ title }} | {{ team_name }}</title>
   <!-- Bootstrap 5.3.3 は static/ に同梱（講義資料と同じ方式。ネット環境に左右されない） -->
   <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
   {# config.py の TEAM_COLOR をチームカラーとして全ページに適用する #}
   <style>:root { --team: {{ team_color }}; }</style>
+
+  {# アイコンと「ホーム画面に追加」用の設定（iPhone / Android でアプリのように開ける） #}
+  <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('manifest') }}">
+  <meta name="theme-color" content="{{ team_color }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="{{ team_name }}">
 </head>
 <body class="bg-light">
+{% from "_icons.html" import icon %}
 
-<nav class="navbar navbar-expand-md navbar-dark bg-team">
+{# ---------- 上のバー：スマホではロゴと自分の名前だけ、PC ではメニューも ---------- #}
+<nav class="navbar navbar-dark bg-team">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">⚽ {{ team_name }}</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-            aria-controls="mainNav" aria-expanded="false" aria-label="メニュー">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="mainNav">
-      <ul class="navbar-nav me-auto">
-        {% if g.user %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('events') }}">予定</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('scores') }}">スコア</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('stats') }}">スタッツ</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('members') }}">メンバー</a></li>
-        {% if g.user.role == 'admin' %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('event_new') }}">＋ 予定を追加</a></li>
-        {% endif %}
-        {% endif %}
-      </ul>
-      <ul class="navbar-nav">
-        {% if g.user %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">👤 {{ g.user.uname }}</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">ログアウト</a></li>
-        {% else %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">ログイン</a></li>
-        {% endif %}
-      </ul>
-    </div>
+    {% if g.user %}
+    <ul class="navbar-nav flex-row gap-3 me-auto ms-4 d-none d-md-flex">
+      <li class="nav-item"><a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">ホーム</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('event') %}active{% endif %}" href="{{ url_for('events') }}">予定</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.endpoint in ('scores', 'result_edit') %}active{% endif %}" href="{{ url_for('scores') }}">スコア</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.endpoint == 'stats' %}active{% endif %}" href="{{ url_for('stats') }}">スタッツ</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('member') %}active{% endif %}" href="{{ url_for('members') }}">メンバー</a></li>
+      {% if g.user.role == 'admin' %}
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('event_new') }}">＋ 予定を追加</a></li>
+      {% endif %}
+    </ul>
+    <ul class="navbar-nav flex-row gap-3 align-items-center">
+      <li class="nav-item">
+        <a class="nav-link d-flex align-items-center gap-1" href="{{ url_for('member_detail', uid=g.user.uid) }}">
+          {{ icon('person', 18) }} {{ g.user.uname }}
+          {% if g.demo %}<span class="badge bg-white text-team ms-1">デモ</span>{% endif %}
+        </a>
+      </li>
+      {% if g.demo %}
+      <li class="nav-item d-none d-md-block"><a class="nav-link" href="{{ url_for('login') }}">ログイン</a></li>
+      {% else %}
+      <li class="nav-item d-none d-md-block"><a class="nav-link" href="{{ url_for('logout') }}">ログアウト</a></li>
+      {% endif %}
+    </ul>
+    {% else %}
+    <ul class="navbar-nav flex-row">
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">ログイン</a></li>
+    </ul>
+    {% endif %}
   </div>
 </nav>
 
@@ -56,7 +71,24 @@
 
 <footer class="text-center text-muted small py-4">
   &copy; 2026 {{ team_name }}
+  {% if g.user and not g.demo %}<span class="d-md-none"> ・ <a href="{{ url_for('logout') }}">ログアウト</a></span>{% endif %}
+  {% if g.demo %}<span class="d-md-none"> ・ <a href="{{ url_for('login') }}">ログイン</a></span>{% endif %}
 </footer>
+
+{% if g.user %}
+{# ---------- スマホ用：画面下のタブバー（PC では非表示） ---------- #}
+<nav class="tabbar d-md-none">
+  <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">{{ icon('home') }}<span>ホーム</span></a>
+  <a href="{{ url_for('events') }}" class="{% if request.endpoint and request.endpoint.startswith('event') %}active{% endif %}">{{ icon('calendar') }}<span>予定</span></a>
+  <a href="{{ url_for('scores') }}" class="{% if request.endpoint in ('scores', 'result_edit') %}active{% endif %}">{{ icon('trophy') }}<span>スコア</span></a>
+  <a href="{{ url_for('stats') }}" class="{% if request.endpoint == 'stats' %}active{% endif %}">{{ icon('chart') }}<span>スタッツ</span></a>
+  <a href="{{ url_for('members') }}" class="{% if request.endpoint and request.endpoint.startswith('member') or request.endpoint == 'profile' %}active{% endif %}">{{ icon('people') }}<span>メンバー</span></a>
+</nav>
+{% if g.user.role == 'admin' and request.endpoint in ('index', 'events') %}
+{# 管理者には「＋」の丸いボタン（予定を追加） #}
+<a href="{{ url_for('event_new') }}" class="fab d-md-none" aria-label="予定を追加">{{ icon('plus', 26) }}</a>
+{% endif %}
+{% endif %}
 
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 </body>

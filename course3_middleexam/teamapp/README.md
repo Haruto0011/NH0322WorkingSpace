@@ -29,6 +29,7 @@ teamapp/
 ├── init_db.py           テーブル作成・更新（何度実行してもOK）
 ├── seed.py              お試しデータ
 ├── make_admin.py        指定したメールのユーザを管理者にする
+├── make_icons.py        アイコン画像を作り直す（チームカラーを変えたとき）
 ├── schema_sqlite.sql    テーブル定義（手元用）
 ├── schema_postgres.sql  テーブル定義（サーバ用）
 ├── flask.wsgi           サーバ用（講義資料の wsgi と同じ役割）
@@ -43,11 +44,21 @@ teamapp/
 │   ├── scores.html      スコア一覧
 │   ├── members.html     メンバー一覧
 │   ├── profile.html     プロフィール編集
+│   ├── member_detail.html 選手ページ（プロフィール・個人成績）
+│   ├── stats.html       スタッツ（ランキング・チーム成績）
+│   ├── error.html       404 / 500 のエラー画面
+│   ├── _icons.html      タブバーのアイコン（SVG）
 │   ├── login.html / regist.html
 └── static/
     ├── css/bootstrap.min.css, js/bootstrap.bundle.min.js   Bootstrap 5.3.3（同梱）
-    └── css/style.css    サイト独自のスタイル
+    ├── css/style.css    サイト独自のスタイル
+    └── icons/           favicon・ホーム画面用アイコン（make_icons.py で生成）
 ```
+
+## デモモード（課題提出用）
+
+`config.py` の `DEMO_MODE = True` のあいだは、ログインしていない人も `DEMO_USER_EMAIL` のユーザ（お試しデータの「監督」）として
+全機能を使える。実際にチームで運用するときは `DEMO_MODE = False` にする（ログイン必須に戻る）。
 
 ## 自分を管理者にする
 

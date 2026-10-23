@@ -60,6 +60,76 @@ a:hover {
 body {
   padding-bottom: 2rem;
 }
+/* スマホでは下タブバーの分だけ余白を足す（iPhone の下の余白 safe-area も考慮） */
+@media (max-width: 767.98px) {
+  body {
+    padding-bottom: calc(4.2rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ---------- 上のバー ---------- */
+.navbar .nav-link.active {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: .35em;
+}
+
+/* ---------- スマホ用の下タブバー ---------- */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1030;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #dee2e6;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabbar a {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .15rem;
+  padding: .5rem 0 .4rem;
+  color: #6c757d;
+  font-size: .68rem;
+  text-decoration: none;
+}
+.tabbar a.active {
+  color: var(--team);
+  font-weight: 600;
+}
+
+/* 管理者用の丸い「＋」ボタン（予定を追加） */
+.fab {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(4.6rem + env(safe-area-inset-bottom));
+  z-index: 1031;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--team);
+  color: #fff;
+  box-shadow: 0 .4rem 1rem rgba(0, 0, 0, .25);
+}
+.fab:hover {
+  color: #fff;
+  background: var(--team-dark);
+}
+
+/* ---------- エラー画面 ---------- */
+.error-code {
+  font-size: 4.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--team);
+}
 
 /* flex の子要素を内容より小さく縮められるようにする（長いタイトルの省略用） */
 .min-w-0 {

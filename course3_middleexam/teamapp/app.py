@@ -15,8 +15,8 @@ import math
 from datetime import date, timedelta
 from functools import wraps
 
-from flask import (Flask, abort, flash, g, redirect, render_template, request,
-                   session, url_for)
+from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
+                   request, session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import config
@@ -49,8 +49,14 @@ def before_request():
 
     # ログイン中なら g.user にユーザ情報を入れておく。テンプレートからも g.user で参照できる
     g.user = None
+    g.demo = False
     if session.get("uid"):
         g.user = db.query("select * from users where uid = %s", (session["uid"],), one=True)
+
+    # デモモード：未ログインなら config.DEMO_USER_EMAIL のユーザとして扱う（課題提出用）
+    if g.user is None and config.DEMO_MODE:
+        g.user = db.query("select * from users where email = %s", (config.DEMO_USER_EMAIL,), one=True)
+        g.demo = g.user is not None
 
 
 @app.context_processor
@@ -171,7 +177,7 @@ def registing():
 
 @app.route("/login")
 def login():
-    if g.user:
+    if g.user and not g.demo:          # 本当にログイン済みならホームへ（デモ中は別ユーザで入り直せる）
         return redirect(url_for("index"))
     return render_template("login.html", title="ログイン")
 
@@ -195,7 +201,8 @@ def logingin():
 def logout():
     session.clear()
     flash("ログアウトしました。", "success")
-    return redirect(url_for("login"))
+    # デモモードならログアウト後もホームが見られる
+    return redirect(url_for("index") if config.DEMO_MODE else url_for("login"))
 
 
 # =========================================================
@@ -369,13 +376,24 @@ def event_new():
         if not f["title"] or not f["event_date"]:
             flash("タイトルと日付は必須です。", "danger")
             return render_template("event_form.html", title="予定を追加", ev=f, **_form_choices())
-        db.execute("""
-            insert into events (etype, title, event_date, start_time, end_time,
-                                place, opponent, note, season, competition, created_by)
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (f["etype"], f["title"], f["event_date"], f["start_time"], f["end_time"],
-              f["place"], f["opponent"], f["note"], f["season"], f["competition"], g.user["uid"]))
-        flash("予定を追加しました。", "success")
+
+        # 繰り返し：「毎週 / 隔週」×「回数」で、同じ内容の予定を日付だけずらして複数作る
+        count = 1
+        if request.form.get("repeat") == "on":
+            count = min(max(_int_or(request.form.get("repeat_count"), 1), 1), 30)
+        interval = 14 if request.form.get("repeat_weeks") == "2" else 7
+        first = date.fromisoformat(f["event_date"])
+
+        for i in range(count):
+            d = (first + timedelta(days=interval * i)).isoformat()
+            db.execute("""
+                insert into events (etype, title, event_date, start_time, end_time,
+                                    place, opponent, note, season, competition, created_by)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (f["etype"], f["title"], d, f["start_time"], f["end_time"],
+                  f["place"], f["opponent"], f["note"], f["season"], f["competition"], g.user["uid"]))
+
+        flash(f"{count}件の予定を追加しました。" if count > 1 else "予定を追加しました。", "success")
         return redirect(url_for("events"))
     return render_template("event_form.html", title="予定を追加", ev=None, **_form_choices())
 
@@ -873,6 +891,40 @@ def member_edit(uid):
         return redirect(url_for("member_edit", uid=uid) if err else url_for("member_detail", uid=uid))
     return render_template("profile.html", title=f"{u['uname']} さんの編集", u=u,
                            form_action=url_for("member_edit", uid=uid), is_admin_edit=True)
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("error.html", title="ページが見つかりません", code=404,
+                           message="お探しのページは見つかりませんでした。削除されたか、URLが間違っている可能性があります。"), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template("error.html", title="エラー", code=500,
+                           message="サーバでエラーが発生しました。時間をおいてもう一度お試しください。"), 500
+
+
+@app.route("/manifest.webmanifest")
+def manifest():
+    """ホーム画面に追加したときのアプリ名・アイコン・色（PWA の manifest）。
+    サーバでは /s0000001/ のようなサブパスになるので url_for で組み立てる"""
+    data = {
+        "name": config.TEAM_NAME,
+        "short_name": config.TEAM_NAME,
+        "start_url": url_for("index"),
+        "scope": url_for("index"),
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": config.TEAM_COLOR,
+        "icons": [
+            {"src": url_for("static", filename="icons/icon-192.png"), "sizes": "192x192", "type": "image/png"},
+            {"src": url_for("static", filename="icons/icon-512.png"), "sizes": "512x512", "type": "image/png"},
+        ],
+    }
+    resp = jsonify(data)
+    resp.mimetype = "application/manifest+json"
+    return resp
 
 
 # 手元で動かすとき:  python app.py  → http://127.0.0.1:5000

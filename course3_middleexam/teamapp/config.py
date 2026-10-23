@@ -8,13 +8,19 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # チーム名（画面の左上やタイトルに出る）
-TEAM_NAME = "〇〇FC"
+TEAM_NAME = "MUDS FC"
 
 # チームカラー（ナビバー・ボタンなどのメインカラー）。CSSの色指定（#rrggbb）
 TEAM_COLOR = "#c8102e"
 
 # 今のシーズン。予定を追加するときの初期値になる（年が変わったらここを直す）
 CURRENT_SEASON = "2026"
+
+# デモモード（課題提出用）
+#   True  : ログインしていない人を DEMO_USER_EMAIL のユーザとして扱う → URLを開くだけで全機能が使える
+#   False : 通常どおりログインが必要（実際にチームで運用するときはこちら）
+DEMO_MODE = True
+DEMO_USER_EMAIL = "admin@example.com"   # seed.py が作る管理者
 
 # セッション（ログイン状態）の暗号化に使う鍵。好きな文字列に変えてもよい
 SECRET_KEY = "6c424ac5d16d778bc1b14afa2c02b1c3"

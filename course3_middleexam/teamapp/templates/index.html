@@ -7,6 +7,13 @@
   {% if g.user.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}
 </div>
 
+{% if g.demo %}
+<div class="alert alert-info py-2 small">
+  <strong>デモモードで動作中</strong>：ログインなしで「{{ g.user.uname }}（管理者）」として操作できます。
+  予定の追加・出欠の回答・試合結果の入力など、すべての機能を自由に試せます（データはお試し用）。
+</div>
+{% endif %}
+
 {# ---------- 未回答の予定があれば目立たせる ---------- #}
 {% if pending %}
 <a href="{{ url_for('events') }}" class="alert alert-warning d-flex justify-content-between align-items-center text-decoration-none py-2">
@@ -19,7 +26,7 @@
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h2 class="h6 text-muted mb-0">直近の予定</h2>
   {% if g.user.role == 'admin' %}
-  <a href="{{ url_for('event_new') }}" class="btn btn-team btn-sm">＋ 予定を追加</a>
+  <a href="{{ url_for('event_new') }}" class="btn btn-team btn-sm d-none d-md-inline-block">＋ 予定を追加</a>
   {% endif %}
 </div>
 {% if events %}
