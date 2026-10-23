@@ -30,6 +30,7 @@ db.init_app(app)
 # 画面で使う選択肢。ここを変えれば全画面に反映される
 ETYPES = {"practice": "練習", "match": "試合", "other": "その他"}
 POSITIONS = ["GK", "DF", "MF", "FW"]
+FEET = ["右", "左", "両"]
 STATUSES = {"yes": "出席", "no": "欠席"}   # 回答していない人は「未回答」扱い
 HALVES = {1: "前半", 2: "後半"}
 OUTCOMES = {"win": "勝ち", "draw": "引き分け", "loss": "負け"}
@@ -57,8 +58,10 @@ def inject_globals():
     # すべてのテンプレートで使える変数
     return {
         "team_name": config.TEAM_NAME,
+        "team_color": config.TEAM_COLOR,
         "ETYPES": ETYPES,
         "POSITIONS": POSITIONS,
+        "FEET": FEET,
         "STATUSES": STATUSES,
         "HALVES": HALVES,
         "OUTCOMES": OUTCOMES,
@@ -102,6 +105,29 @@ def jdate(v):
 def jtime(v):
     """テンプレート用: 19:00:00 → 19:00"""
     return str(v)[:5] if v else ""
+
+
+@app.template_filter("jfulldate")
+def jfulldate(v):
+    """テンプレート用: 2004-05-17 → 2004年5月17日"""
+    if not v:
+        return ""
+    if isinstance(v, str):
+        v = date.fromisoformat(v)
+    return f"{v.year}年{v.month}月{v.day}日"
+
+
+def _age(birthdate):
+    """生年月日から今日の年齢を計算する（未設定なら None）"""
+    if not birthdate:
+        return None
+    if isinstance(birthdate, str):
+        birthdate = date.fromisoformat(birthdate)
+    today = date.today()
+    age = today.year - birthdate.year
+    if (today.month, today.day) < (birthdate.month, birthdate.day):   # 今年の誕生日がまだなら1引く
+        age -= 1
+    return age
 
 
 # =========================================================
@@ -710,29 +736,143 @@ def members():
         from users
         order by coalesce(number, 999), uname
     """)
-    return render_template("members.html", title="メンバー", members=rows)
+    # ポジションごとにまとめる（GK → DF → MF → FW → 未設定）
+    groups = {p: [] for p in POSITIONS}
+    groups[None] = []
+    for r in rows:
+        groups[r["position"] if r["position"] in POSITIONS else None].append(r)
+    return render_template("members.html", title="メンバー", groups=groups, total=len(rows))
+
+
+def _player_stats(uid, season):
+    """1人分の成績（season=None なら通算）"""
+    scope, params = _scope_filter(season, None)
+    today = date.today().isoformat()
+
+    def count(sql, extra):
+        return db.query(sql, tuple(extra) + tuple(params), one=True)["c"]
+
+    goals = count(f"""select count(*) as c from goals g join events e on e.eid = g.eid
+                      where g.side = 'our' and g.scorer_uid = %s {scope}""", (uid,))
+    assists = count(f"""select count(*) as c from goals g join events e on e.eid = g.eid
+                        where g.side = 'our' and g.assist_uid = %s {scope}""", (uid,))
+    mvps = count(f"""select count(*) as c from match_results r join events e on e.eid = r.eid
+                     where r.mvp_uid = %s {scope}""", (uid,))
+    # 出席：終わった予定（中止除く）のうち「出席」と答えた数。試合だけの数も出す
+    held = count(f"""select count(*) as c from events e
+                     where e.cancelled = 0 and e.event_date <= %s {scope}""", (today,))
+    attended = count(f"""select count(*) as c from attendance a join events e on e.eid = a.eid
+                         where a.uid = %s and a.status = 'yes' and e.cancelled = 0 and e.event_date <= %s {scope}""",
+                     (uid, today))
+    matches_held = count(f"""select count(*) as c from events e
+                             where e.etype = 'match' and e.cancelled = 0 and e.event_date <= %s {scope}""", (today,))
+    matches_attended = count(f"""select count(*) as c from attendance a join events e on e.eid = a.eid
+                                 where a.uid = %s and a.status = 'yes' and e.etype = 'match'
+                                   and e.cancelled = 0 and e.event_date <= %s {scope}""", (uid, today))
+    return {
+        "goals": goals, "assists": assists, "mvps": mvps,
+        "attended": attended, "held": held,
+        "rate": round(100 * attended / held) if held else None,
+        "matches_attended": matches_attended, "matches_held": matches_held,
+    }
+
+
+@app.route("/members/<int:uid>")
+@login_required
+def member_detail(uid):
+    u = db.query("select * from users where uid = %s", (uid,), one=True)
+    if u is None:
+        abort(404)
+
+    stats = {
+        "season": _player_stats(uid, config.CURRENT_SEASON),
+        "total": _player_stats(uid, None),
+    }
+    # 得点した試合（新しい順）
+    scoring = db.query("""
+        select e.eid, e.title, e.event_date, e.opponent, e.competition, e.season, count(*) as n
+        from goals g
+        join events e on e.eid = g.eid
+        where g.side = 'our' and g.scorer_uid = %s
+        group by e.eid, e.title, e.event_date, e.opponent, e.competition, e.season
+        order by e.event_date desc
+        limit 10
+    """, (uid,))
+    mvp_matches = db.query("""
+        select e.eid, e.title, e.event_date, e.opponent, e.season
+        from match_results r
+        join events e on e.eid = r.eid
+        where r.mvp_uid = %s
+        order by e.event_date desc
+        limit 10
+    """, (uid,))
+
+    return render_template("member_detail.html", title=u["uname"], u=u, age=_age(u["birthdate"]),
+                           stats=stats, scoring=scoring, mvp_matches=mvp_matches,
+                           season=config.CURRENT_SEASON)
+
+
+def _save_profile(uid, allow_role=False):
+    """プロフィール編集フォームの内容を保存する（自分用と管理者用で共通）。
+    エラーメッセージを返す（問題なければ None）"""
+    f = request.form
+    uname = f.get("uname", "").strip()
+    if not uname:
+        return "名前は必須です。"
+    position = f.get("position") or None
+    if position not in POSITIONS:
+        position = None
+    foot = f.get("foot") or None
+    if foot not in FEET:
+        foot = None
+    birthdate = f.get("birthdate", "").strip() or None
+    if birthdate:
+        try:
+            date.fromisoformat(birthdate)
+        except ValueError:
+            return "生年月日の形式が正しくありません。"
+
+    db.execute("""
+        update users
+           set uname = %s, number = %s, position = %s,
+               height_cm = %s, weight_kg = %s, birthdate = %s, foot = %s, intro = %s
+         where uid = %s
+    """, (uname, _int_or(f.get("number")), position,
+          _int_or(f.get("height_cm")), _int_or(f.get("weight_kg")), birthdate, foot,
+          f.get("intro", "").strip(), uid))
+
+    if allow_role and f.get("role") in ("admin", "member"):
+        db.execute("update users set role = %s where uid = %s", (f.get("role"), uid))
+    return None
 
 
 @app.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
+    """自分のプロフィール編集"""
     if request.method == "POST":
-        uname = request.form.get("uname", "").strip()
-        number = request.form.get("number", "").strip()
-        position = request.form.get("position") or None
-
-        if not uname:
-            flash("名前は必須です。", "danger")
-            return redirect(url_for("profile"))
-        number = int(number) if number.isdigit() else None
-        if position not in POSITIONS:
-            position = None
-
-        db.execute("update users set uname = %s, number = %s, position = %s where uid = %s",
-                   (uname, number, position, g.user["uid"]))
-        flash("プロフィールを更新しました。", "success")
+        err = _save_profile(g.user["uid"])
+        flash(err or "プロフィールを更新しました。", "danger" if err else "success")
         return redirect(url_for("profile"))
-    return render_template("profile.html", title="プロフィール")
+    return render_template("profile.html", title="プロフィール", u=g.user,
+                           form_action=url_for("profile"), is_admin_edit=False)
+
+
+@app.route("/members/<int:uid>/edit", methods=["GET", "POST"])
+@admin_required
+def member_edit(uid):
+    """管理者が他のメンバーのプロフィール（と権限）を編集する"""
+    u = db.query("select * from users where uid = %s", (uid,), one=True)
+    if u is None:
+        abort(404)
+    if request.method == "POST":
+        # 自分自身の管理者権限は外せない（管理者が誰もいなくなるのを防ぐ）
+        err = _save_profile(uid, allow_role=(uid != g.user["uid"]))
+        flash(err or f"{request.form.get('uname', '').strip()} さんのプロフィールを更新しました。",
+              "danger" if err else "success")
+        return redirect(url_for("member_edit", uid=uid) if err else url_for("member_detail", uid=uid))
+    return render_template("profile.html", title=f"{u['uname']} さんの編集", u=u,
+                           form_action=url_for("member_edit", uid=uid), is_admin_edit=True)
 
 
 # 手元で動かすとき:  python app.py  → http://127.0.0.1:5000

@@ -1,33 +1,76 @@
 {% extends "layout.html" %}
 {% block content %}
+{# 自分のプロフィール編集と、管理者による他メンバーの編集で共通。u = 編集対象のユーザ #}
 
-<h1 class="h5 mb-3">プロフィール</h1>
+{% if is_admin_edit %}
+<a href="{{ url_for('member_detail', uid=u.uid) }}" class="text-decoration-none small">&larr; {{ u.uname }}</a>
+{% endif %}
+<h1 class="h5 my-2">{{ title }}</h1>
 
 <div class="card shadow-sm">
   <div class="card-body">
-    <p class="text-muted small mb-3">{{ g.user.email }}{% if g.user.role == 'admin' %} ／ 管理者{% endif %}</p>
-    <form method="post">
+    <p class="text-muted small mb-3">{{ u.email }}</p>
+    <form method="post" action="{{ form_action }}">
       <div class="mb-3">
         <label class="form-label">名前 <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" name="uname" required value="{{ g.user.uname }}">
+        <input type="text" class="form-control" name="uname" required value="{{ u.uname }}">
       </div>
       <div class="row">
         <div class="col-6 mb-3">
           <label class="form-label">背番号</label>
           <input type="number" class="form-control" name="number" min="0" max="99"
-                 value="{{ g.user.number if g.user.number is not none else '' }}">
+                 value="{{ u.number if u.number is not none else '' }}">
         </div>
         <div class="col-6 mb-3">
           <label class="form-label">ポジション</label>
           <select class="form-select" name="position">
             <option value="">–</option>
             {% for p in POSITIONS %}
-            <option value="{{ p }}" {% if g.user.position == p %}selected{% endif %}>{{ p }}</option>
+            <option value="{{ p }}" {% if u.position == p %}selected{% endif %}>{{ p }}</option>
             {% endfor %}
           </select>
         </div>
+        <div class="col-4 mb-3">
+          <label class="form-label">身長 (cm)</label>
+          <input type="number" class="form-control" name="height_cm" min="100" max="250"
+                 value="{{ u.height_cm if u.height_cm else '' }}">
+        </div>
+        <div class="col-4 mb-3">
+          <label class="form-label">体重 (kg)</label>
+          <input type="number" class="form-control" name="weight_kg" min="30" max="200"
+                 value="{{ u.weight_kg if u.weight_kg else '' }}">
+        </div>
+        <div class="col-4 mb-3">
+          <label class="form-label">利き足</label>
+          <select class="form-select" name="foot">
+            <option value="">–</option>
+            {% for f in FEET %}
+            <option value="{{ f }}" {% if u.foot == f %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-sm-6 mb-3">
+          <label class="form-label">生年月日</label>
+          <input type="date" class="form-control" name="birthdate" value="{{ u.birthdate or '' }}">
+        </div>
+        {% if is_admin_edit and u.uid != g.user.uid %}
+        <div class="col-12 col-sm-6 mb-3">
+          <label class="form-label">権限</label>
+          <select class="form-select" name="role">
+            <option value="member" {% if u.role == 'member' %}selected{% endif %}>メンバー</option>
+            <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>管理者</option>
+          </select>
+        </div>
+        {% endif %}
       </div>
-      <button class="btn btn-success w-100">保存</button>
+      <div class="mb-3">
+        <label class="form-label">ひとこと</label>
+        <textarea class="form-control" name="intro" rows="2" placeholder="自己紹介、意気込みなど">{{ u.intro or '' }}</textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-team flex-grow-1">保存</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('member_detail', uid=u.uid) }}">キャンセル</a>
+      </div>
     </form>
   </div>
 </div>

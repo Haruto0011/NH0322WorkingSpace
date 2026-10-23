@@ -59,7 +59,7 @@
       <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('event_edit', eid=ev.eid) }}">編集</a>
       <form method="post" action="{{ url_for('event_cancel', eid=ev.eid) }}">
         {% if ev.cancelled %}
-        <button class="btn btn-sm btn-outline-success">中止を取り消す</button>
+        <button class="btn btn-sm btn-outline-team">中止を取り消す</button>
         {% else %}
         <button class="btn btn-sm btn-outline-dark" onclick="return confirm('この予定を中止にしますか？');">中止にする</button>
         {% endif %}
@@ -146,7 +146,7 @@
       </div>
       <input type="text" class="form-control mb-2" name="comment" maxlength="100"
              placeholder="ひとこと（任意）" value="{{ mine.comment if mine and mine.comment else '' }}">
-      <button class="btn btn-success w-100">回答する</button>
+      <button class="btn btn-team w-100">回答する</button>
     </form>
   </div>
 </div>

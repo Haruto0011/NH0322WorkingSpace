@@ -1,16 +1,23 @@
 """
 お試しデータを入れる（任意）:  python seed.py
-空のDBにだけ入れる。メンバー6人・予定5件・適当な出欠が入る。
+空のDBにだけ入れる。入るもの：
+  ・メンバー20人（監督＋選手19人、身長・体重・生年月日つき）
+  ・2025シーズン：試合6件（結果入り）
+  ・2026シーズン：毎週土曜の練習（過去28週＋今後4週）、試合13件（過去10件は結果入り）、その他の予定
+  ・出欠と得点・アシスト・MVP（乱数で生成。毎回同じ内容になる）
 全員パスワードは pass1234
   管理者: admin@example.com
-  選手  : tanaka@example.com など
+  選手  : tanaka@example.com など（ローマ字 + @example.com）
 """
+import random
 from datetime import date, timedelta
 
 from werkzeug.security import generate_password_hash
 
 import config
 import db
+
+rng = random.Random(2026)   # 乱数の種を固定 → 何度実行しても同じデータになる
 
 conn = db.get_conn()
 cur = conn.cursor()
@@ -23,81 +30,174 @@ if cur.fetchone()["c"] > 0:
     raise SystemExit
 
 pw = generate_password_hash("pass1234", method="pbkdf2:sha256")
-
-users = [
-    # (名前, email, role, 背番号, ポジション)
-    ("監督",   "admin@example.com",  "admin",  None, None),
-    ("田中",   "tanaka@example.com", "member", 1,  "GK"),
-    ("鈴木",   "suzuki@example.com", "member", 4,  "DF"),
-    ("佐藤",   "sato@example.com",   "member", 8,  "MF"),
-    ("高橋",   "takahashi@example.com", "member", 10, "MF"),
-    ("伊藤",   "ito@example.com",    "member", 9,  "FW"),
-]
-for name, email, role, number, pos in users:
-    cur.execute(q("insert into users (uname, email, pw, role, number, position) "
-                  "values (%s, %s, %s, %s, %s, %s)"),
-                (name, email, pw, role, number, pos))
-
 today = date.today()
 season = config.CURRENT_SEASON
-events = [
-    # (種別, タイトル, 日付, 開始, 終了, 場所, 相手, メモ, 大会)
-    ("match",    "リーグ戦 vs FC PHOENIX", today - timedelta(days=19), "13:50", "15:30", "代々木公園サッカー場", "FC PHOENIX", "", "東京都リーグ"),
-    ("match",    "リーグ戦 vs 東京蹴球団", today - timedelta(days=12), "16:10", "17:45", "みらい平グラウンド", "東京蹴球団", "", "東京都リーグ"),
-    ("practice", "通常練習", today - timedelta(days=5), "19:00", "21:00", "〇〇グラウンド", "", "", ""),
-    ("practice", "通常練習", today + timedelta(days=1), "19:00", "21:00", "〇〇グラウンド", "", "ビブス持参", ""),
-    ("match",    "練習試合 vs △△FC", today + timedelta(days=4), "10:00", "12:00", "□□公園サッカー場", "△△FC", "集合 9:15\n白ユニフォーム", "練習試合"),
-    ("practice", "通常練習", today + timedelta(days=8), "19:00", "21:00", "〇〇グラウンド", "", "", ""),
-    ("match",    "東京カップ 1回戦", today + timedelta(days=11), "13:50", "17:00", "代々木公園サッカー場", "杉並FC", "", "東京カップ"),
-    ("other",    "新歓ミーティング", today + timedelta(days=12), "18:00", None, "学生会館 201", "", "次期役員の相談", ""),
+prev_season = str(int(season) - 1)
+
+# ---------------------------------------------------------------
+# メンバー
+# ---------------------------------------------------------------
+members = [
+    # (名前, ローマ字, role, 背番号, ポジション, 身長, 体重, 生年月日, 利き足, ひとこと)
+    ("監督",   "admin",     "admin",  None, None, None, None, None,         None, "今年こそ昇格！"),
+    ("田中",   "tanaka",    "member", 1,  "GK", 183, 78, "2003-04-12", "右", "ビッグセーブで流れを引き寄せます"),
+    ("山本",   "yamamoto",  "member", 21, "GK", 178, 74, "2005-11-03", "右", ""),
+    ("鈴木",   "suzuki",    "member", 2,  "DF", 175, 70, "2004-01-25", "右", ""),
+    ("渡辺",   "watanabe",  "member", 3,  "DF", 180, 75, "2003-09-08", "左", "左SB。クロスが武器"),
+    ("中村",   "nakamura",  "member", 4,  "DF", 182, 77, "2002-06-30", "右", "キャプテン"),
+    ("小林",   "kobayashi", "member", 5,  "DF", 179, 76, "2004-12-14", "右", ""),
+    ("加藤",   "kato",      "member", 13, "DF", 173, 68, "2005-03-19", "右", ""),
+    ("吉田",   "yoshida",   "member", 15, "DF", 176, 71, "2005-08-02", "両", ""),
+    ("山田",   "yamada",    "member", 6,  "MF", 172, 66, "2003-02-11", "右", "ボランチ"),
+    ("松本",   "matsumoto", "member", 7,  "MF", 170, 64, "2004-07-23", "左", "ドリブルで仕掛けます"),
+    ("佐藤",   "sato",      "member", 8,  "MF", 174, 68, "2003-10-05", "右", "セットプレーのキッカー"),
+    ("高橋",   "takahashi", "member", 10, "MF", 171, 65, "2002-12-01", "右", "ゲームメイク担当"),
+    ("井上",   "inoue",     "member", 14, "MF", 168, 62, "2005-05-27", "右", ""),
+    ("木村",   "kimura",    "member", 16, "MF", 175, 69, "2004-04-09", "左", ""),
+    ("林",     "hayashi",   "member", 17, "MF", 169, 63, "2005-09-15", "右", ""),
+    ("伊藤",   "ito",       "member", 9,  "FW", 177, 72, "2003-07-18", "右", "得点王を狙います"),
+    ("斎藤",   "saito",     "member", 11, "FW", 181, 76, "2004-03-03", "左", "ポストプレーが得意"),
+    ("清水",   "shimizu",   "member", 18, "FW", 173, 67, "2005-01-20", "右", ""),
+    ("森",     "mori",      "member", 19, "FW", 176, 70, "2005-10-10", "両", ""),
 ]
-for etype, title, d, st, et, place, opp, note, comp in events:
-    cur.execute(q("insert into events (etype, title, event_date, start_time, end_time, place, opponent, note, season, competition, created_by) "
-                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)"),
-                (etype, title, d.isoformat(), st, et, place, opp, note, season, comp))
+uids, pos_of = [], {}
+for name, romaji, role, number, pos, h, w, bd, foot, intro in members:
+    cur.execute(q("insert into users (uname, email, pw, role, number, position, height_cm, weight_kg, birthdate, foot, intro) "
+                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"),
+                (name, f"{romaji}@example.com", pw, role, number, pos, h, w, bd, foot, intro))
+cur.execute(q("select uid, position from users order by uid"))
+for r in cur.fetchall():
+    uids.append(r["uid"])
+    pos_of[r["uid"]] = r["position"]
+admin_uid = uids[0]
+players = uids[1:]
 
-# 出欠を適当に入れる
-cur.execute(q("select uid from users order by uid"))
-uids = [r["uid"] for r in cur.fetchall()]
-cur.execute(q("select eid from events order by eid"))
-eids = [r["eid"] for r in cur.fetchall()]
+# 得点者・アシストの選ばれやすさ（FW > MF > DF、GK は得点しない）
+goal_weight = {"GK": 0, "DF": 1, "MF": 3, "FW": 6}
+assist_weight = {"GK": 0, "DF": 2, "MF": 5, "FW": 3}
 
-pattern = ["yes", "yes", "no", "yes", None, "yes"]  # 6人分（None は未回答）
-for i, eid in enumerate(eids[:5]):
-    for j, uid in enumerate(uids):
-        status = pattern[(i + j) % len(pattern)]
-        if status:
-            comment = "少し遅れます" if (i + j) % 4 == 0 else ""
-            cur.execute(q("insert into attendance (eid, uid, status, comment) values (%s, %s, %s, %s)"),
-                        (eid, uid, status, comment))
 
-# 過去2試合の結果と得点（uids: 0=監督 1=田中 2=鈴木 3=佐藤 4=高橋 5=伊藤）
-sato, takahashi, ito = uids[3], uids[4], uids[5]
-results = [
-    # (eid, 前半自, 後半自, 前半相手, 後半相手, MVP, メモ, 得点リスト)
-    (eids[0], 1, 1, 0, 0, takahashi, "守備が安定していた。", [
-        ("our", takahashi, sato, 1, 12, ""),
-        ("our", ito, None, 2, 33, ""),
-    ]),
-    (eids[1], 3, 1, 0, 2, ito, "前半で決めきれたのが大きい。後半の失点は要反省。", [
-        ("our", ito, takahashi, 1, 20, ""),
-        ("our", sato, None, 1, 25, "PK"),
-        ("our", ito, None, 1, 40, ""),
-        ("opp", None, None, 2, 20, ""),
-        ("opp", None, None, 2, 30, ""),
-        ("our", ito, None, 2, 40, ""),
-    ]),
+def pick(weights, exclude=None):
+    cands = [u for u in players if weights[pos_of[u]] > 0 and u != exclude]
+    return rng.choices(cands, weights=[weights[pos_of[u]] for u in cands])[0]
+
+
+# ---------------------------------------------------------------
+# 予定
+# ---------------------------------------------------------------
+opponents = ["東京蹴球団", "FC PHOENIX", "杉並FC", "練馬ユナイテッド", "渋谷SC", "品川FC",
+             "三鷹クラブ", "調布FC", "世田谷FC", "大田ユナイテッド", "北区FC", "足立SC"]
+grounds = ["代々木公園サッカー場", "みらい平グラウンド", "駒沢第二球技場", "夢の島競技場", "多摩川緑地G"]
+
+
+def add_event(etype, title, d, st, et, place, opp, note, season_, comp):
+    cur.execute(q("insert into events (etype, title, event_date, start_time, end_time, place, opponent, note, "
+                  "season, competition, created_by) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"),
+                (etype, title, d.isoformat(), st, et, place, opp, note, season_, comp, admin_uid))
+    cur.execute(q("select max(eid) as m from events"))
+    return cur.fetchone()["m"]
+
+
+events = []   # (eid, etype, date)
+
+# --- 前シーズン：試合6件（昨年の 4〜12 月あたり） ---
+for i in range(6):
+    d = today - timedelta(days=560 - i * 40)
+    opp = opponents[i]
+    comp = "東京都リーグ" if i < 4 else "東京カップ"
+    eid = add_event("match", f"リーグ戦 vs {opp}" if comp == "東京都リーグ" else f"東京カップ vs {opp}",
+                    d, "14:00", "16:00", rng.choice(grounds), opp, "", prev_season, comp)
+    events.append((eid, "match", d))
+
+# --- 今シーズン：毎週土曜の練習（28週前〜4週後） ---
+last_sat = today - timedelta(days=(today.weekday() - 5) % 7)   # 直近の土曜（今日が土曜なら今日）
+for w in range(-28, 5):
+    d = last_sat + timedelta(weeks=w)
+    note = rng.choice(["", "", "", "ビブス持参", "雨天時は中止連絡します", "終了後ミーティングあり"])
+    eid = add_event("practice", "通常練習", d, "19:00", "21:00", "〇〇グラウンド", "", note, season, "")
+    events.append((eid, "practice", d))
+
+# --- 今シーズン：試合13件（過去10件、今後3件） ---
+match_plan = [
+    # (今日から何日前(+なら後), 大会, 相手)
+    (-180, "練習試合", "三鷹クラブ"),
+    (-160, "東京都リーグ", "東京蹴球団"),
+    (-140, "東京都リーグ", "FC PHOENIX"),
+    (-120, "東京都リーグ", "杉並FC"),
+    (-100, "東京カップ", "練馬ユナイテッド"),
+    (-80,  "東京都リーグ", "渋谷SC"),
+    (-60,  "練習試合", "品川FC"),
+    (-40,  "東京カップ", "調布FC"),
+    (-19,  "東京都リーグ", "世田谷FC"),
+    (-12,  "東京都リーグ", "大田ユナイテッド"),
+    (4,    "練習試合", "北区FC"),
+    (11,   "東京カップ", "足立SC"),
+    (25,   "東京都リーグ", "三鷹クラブ"),
 ]
-for eid, o1, o2, p1, p2, mvp, memo, goals in results:
-    cur.execute(q("insert into match_results (eid, our_1h, our_2h, opp_1h, opp_2h, mvp_uid, memo) "
-                  "values (%s, %s, %s, %s, %s, %s, %s)"),
-                (eid, o1, o2, p1, p2, mvp, memo))
-    for side, scorer, assist, half, minute, note in goals:
+for offset, comp, opp in match_plan:
+    d = today + timedelta(days=offset)
+    title = {"東京都リーグ": f"リーグ戦 vs {opp}", "東京カップ": f"東京カップ vs {opp}"}.get(comp, f"練習試合 vs {opp}")
+    note = rng.choice(["", "集合は開始45分前", "白ユニフォーム", "車出せる人は監督まで"])
+    eid = add_event("match", title, d, "13:50", "15:40", rng.choice(grounds), opp, note, season, comp)
+    events.append((eid, "match", d))
+
+# --- その他 ---
+eid = add_event("other", "新歓ミーティング", today + timedelta(days=6), "18:00", None, "学生会館 201", "", "次期役員の相談", season, "")
+events.append((eid, "other", today + timedelta(days=6)))
+eid = add_event("other", "納会", today + timedelta(days=45), "19:00", None, "居酒屋（未定）", "", "", season, "")
+events.append((eid, "other", today + timedelta(days=45)))
+
+# ---------------------------------------------------------------
+# 出欠（終わった予定は9割が回答・うち8割が出席。今後の予定は半分くらいが回答済み）
+# ---------------------------------------------------------------
+comments = ["少し遅れます", "前半だけ参加します", "車出せます", "用事があり欠席します", "試験のため"]
+for eid, etype, d in events:
+    past = d <= today
+    for u in uids:
+        if not (rng.random() < (0.9 if past else 0.5)):
+            continue                                        # 未回答
+        yes = rng.random() < (0.8 if past else 0.7)
+        comment = rng.choice(comments) if rng.random() < 0.1 else ""
+        cur.execute(q("insert into attendance (eid, uid, status, comment) values (%s, %s, %s, %s)"),
+                    (eid, u, "yes" if yes else "no", comment))
+
+# ---------------------------------------------------------------
+# 試合結果と得点（終わった試合だけ）
+# ---------------------------------------------------------------
+memos = ["", "前半の入りが良かった。", "後半に失点が続いた。要修正。", "セットプレーから2点。", "終盤まで集中できた。", ""]
+for eid, etype, d in events:
+    if etype != "match" or d > today:
+        continue
+    our = rng.choices([0, 1, 2, 3, 4, 5], weights=[1, 3, 4, 3, 2, 1])[0]
+    opp = rng.choices([0, 1, 2, 3], weights=[4, 4, 2, 1])[0]
+    our_1h = rng.randint(0, our)
+    opp_1h = rng.randint(0, opp)
+    pk_our = pk_opp = None
+    if our == opp and rng.random() < 0.5:   # 引き分けの半分はPK戦
+        pk_our, pk_opp = (5, 4) if rng.random() < 0.5 else (3, 4)
+    mvp = pick(goal_weight) if our > 0 else pick(assist_weight)
+    cur.execute(q("insert into match_results (eid, our_1h, our_2h, opp_1h, opp_2h, our_pk, opp_pk, mvp_uid, memo) "
+                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"),
+                (eid, our_1h, our - our_1h, opp_1h, opp - opp_1h, pk_our, pk_opp, mvp, rng.choice(memos)))
+
+    # 自チームの得点
+    for i in range(our):
+        half = 1 if i < our_1h else 2
+        scorer = pick(goal_weight)
+        assist = pick(assist_weight, exclude=scorer) if rng.random() < 0.6 else None
+        note = rng.choice(["", "", "", "", "PK", "ヘディング", "ミドル"])
         cur.execute(q("insert into goals (eid, side, scorer_uid, assist_uid, half, minute, note) "
                       "values (%s, %s, %s, %s, %s, %s, %s)"),
-                    (eid, side, scorer, assist, half, minute, note))
+                    (eid, "our", scorer, assist, half, rng.randint(1, 45), note))
+    # 相手の得点
+    for i in range(opp):
+        half = 1 if i < opp_1h else 2
+        cur.execute(q("insert into goals (eid, side, scorer_uid, assist_uid, half, minute, note) "
+                      "values (%s, %s, %s, %s, %s, %s, %s)"),
+                    (eid, "opp", None, None, half, rng.randint(1, 45), ""))
 
 conn.commit()
 cur.close()
 conn.close()
-print("OK: お試しデータを入れました。admin@example.com / pass1234 でログインできます。")
+print(f"OK: お試しデータを入れました（メンバー{len(members)}人・予定{len(events)}件）。")
+print("    admin@example.com / pass1234 でログインできます（選手は tanaka@example.com など）。")

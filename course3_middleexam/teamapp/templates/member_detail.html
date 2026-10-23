@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<a href="{{ url_for('members') }}" class="text-decoration-none small">&larr; メンバー一覧</a>
+
+{# ---------- プロフィール ---------- #}
+<div class="card shadow-sm my-2">
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="big-number">{{ u.number if u.number else '–' }}</div>
+      <div class="min-w-0">
+        <h1 class="h4 mb-1">{{ u.uname }}</h1>
+        {% if u.position %}<span class="badge bg-light text-dark border">{{ u.position }}</span>{% endif %}
+        {% if u.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}
+      </div>
+    </div>
+
+    <dl class="row mb-0 profile-dl">
+      <dt class="col-4 col-sm-3 fw-normal text-muted">身長 / 体重</dt>
+      <dd class="col-8 col-sm-9">
+        {% if u.height_cm %}{{ u.height_cm }} cm{% else %}–{% endif %} /
+        {% if u.weight_kg %}{{ u.weight_kg }} kg{% else %}–{% endif %}
+      </dd>
+      <dt class="col-4 col-sm-3 fw-normal text-muted">生年月日</dt>
+      <dd class="col-8 col-sm-9">{% if u.birthdate %}{{ u.birthdate|jfulldate }}（{{ age }}歳）{% else %}–{% endif %}</dd>
+      <dt class="col-4 col-sm-3 fw-normal text-muted">利き足</dt>
+      <dd class="col-8 col-sm-9">{{ u.foot or '–' }}</dd>
+      {% if u.intro %}
+      <dt class="col-4 col-sm-3 fw-normal text-muted">ひとこと</dt>
+      <dd class="col-8 col-sm-9 pre-line">{{ u.intro }}</dd>
+      {% endif %}
+    </dl>
+
+    {% if u.uid == g.user.uid %}
+    <a class="btn btn-sm btn-outline-team mt-3" href="{{ url_for('profile') }}">プロフィールを編集</a>
+    {% elif g.user.role == 'admin' %}
+    <a class="btn btn-sm btn-outline-secondary mt-3" href="{{ url_for('member_edit', uid=u.uid) }}">編集（管理者）</a>
+    {% endif %}
+  </div>
+</div>
+
+{# ---------- 成績 ---------- #}
+<div class="card shadow-sm mb-2">
+  <div class="card-body">
+    <h2 class="h6 d-flex justify-content-between">
+      <span>成績</span>
+      <a href="{{ url_for('stats') }}" class="small text-decoration-none">ランキング &rsaquo;</a>
+    </h2>
+    <table class="table table-sm mb-0 player-stats">
+      <thead>
+        <tr><th></th><th class="text-end">{{ season }}シーズン</th><th class="text-end">通算</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>⚽ 得点</td><td class="text-end fw-bold">{{ stats.season.goals }}</td><td class="text-end">{{ stats.total.goals }}</td></tr>
+        <tr><td>🎯 アシスト</td><td class="text-end fw-bold">{{ stats.season.assists }}</td><td class="text-end">{{ stats.total.assists }}</td></tr>
+        <tr><td>🏅 MVP</td><td class="text-end fw-bold">{{ stats.season.mvps }}</td><td class="text-end">{{ stats.total.mvps }}</td></tr>
+        <tr>
+          <td>✅ 出席</td>
+          <td class="text-end fw-bold">{{ stats.season.attended }}<small class="fw-normal text-muted">/{{ stats.season.held }}{% if stats.season.rate is not none %} ({{ stats.season.rate }}%){% endif %}</small></td>
+          <td class="text-end">{{ stats.total.attended }}<small class="text-muted">/{{ stats.total.held }}{% if stats.total.rate is not none %} ({{ stats.total.rate }}%){% endif %}</small></td>
+        </tr>
+        <tr>
+          <td class="ps-4 text-muted">うち試合</td>
+          <td class="text-end">{{ stats.season.matches_attended }}<small class="text-muted">/{{ stats.season.matches_held }}</small></td>
+          <td class="text-end">{{ stats.total.matches_attended }}<small class="text-muted">/{{ stats.total.matches_held }}</small></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ---------- 得点した試合・MVPの試合 ---------- #}
+{% if scoring or mvp_matches %}
+<div class="row g-2">
+  {% if scoring %}
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6">得点した試合</h2>
+        <ul class="list-unstyled mb-0">
+          {% for m in scoring %}
+          <li class="py-1 border-bottom d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('event_detail', eid=m.eid) }}" class="text-decoration-none text-body text-truncate">
+              <small class="text-muted">{% if m.season != season %}{{ m.season }}・{% endif %}{{ m.event_date|jdate }}</small> vs {{ m.opponent or m.title }}
+            </a>
+            <span class="badge bg-team flex-shrink-0 ms-2">{{ m.n }}点</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if mvp_matches %}
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6">MVPの試合</h2>
+        <ul class="list-unstyled mb-0">
+          {% for m in mvp_matches %}
+          <li class="py-1 border-bottom">
+            <a href="{{ url_for('event_detail', eid=m.eid) }}" class="text-decoration-none text-body">
+              🏅 <small class="text-muted">{% if m.season != season %}{{ m.season }}・{% endif %}{{ m.event_date|jdate }}</small> vs {{ m.opponent or m.title }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

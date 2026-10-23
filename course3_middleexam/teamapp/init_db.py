@@ -18,6 +18,11 @@ MIGRATIONS = [
     ("events に competition 列を追加", "alter table events add column competition text"),
     ("season が空の予定に今のシーズンを入れる",
      f"update events set season = '{config.CURRENT_SEASON}' where season is null"),
+    ("users に height_cm 列を追加", "alter table users add column height_cm integer"),
+    ("users に weight_kg 列を追加", "alter table users add column weight_kg integer"),
+    ("users に birthdate 列を追加", "alter table users add column birthdate date"),
+    ("users に foot 列を追加", "alter table users add column foot text"),
+    ("users に intro 列を追加", "alter table users add column intro text"),
 ]
 
 if config.DB_KIND == "sqlite":

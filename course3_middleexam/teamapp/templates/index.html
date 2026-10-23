@@ -19,7 +19,7 @@
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h2 class="h6 text-muted mb-0">直近の予定</h2>
   {% if g.user.role == 'admin' %}
-  <a href="{{ url_for('event_new') }}" class="btn btn-success btn-sm">＋ 予定を追加</a>
+  <a href="{{ url_for('event_new') }}" class="btn btn-team btn-sm">＋ 予定を追加</a>
   {% endif %}
 </div>
 {% if events %}
@@ -29,7 +29,7 @@
 {% else %}
 <div class="card mb-2"><div class="card-body text-muted">今後の予定はありません。</div></div>
 {% endif %}
-<a href="{{ url_for('events') }}" class="btn btn-outline-success btn-sm w-100 mb-4">すべての予定を見る</a>
+<a href="{{ url_for('events') }}" class="btn btn-outline-team btn-sm w-100 mb-4">すべての予定を見る</a>
 
 <div class="row g-3">
   {# ---------- 最新の試合結果 ---------- #}

@@ -47,17 +47,17 @@
 {# ---------- 大会で絞り込み（シーズン選択時のみ） ---------- #}
 {% if competitions %}
 <div class="d-flex flex-wrap gap-2 mb-3">
-  <a class="btn btn-sm {% if not competition %}btn-success{% else %}btn-outline-success{% endif %}"
+  <a class="btn btn-sm {% if not competition %}btn-team{% else %}btn-outline-team{% endif %}"
      href="{{ url_for('stats', season=season) }}">すべて</a>
   {% for c in competitions %}
-  <a class="btn btn-sm {% if c == competition %}btn-success{% else %}btn-outline-success{% endif %}"
+  <a class="btn btn-sm {% if c == competition %}btn-team{% else %}btn-outline-team{% endif %}"
      href="{{ url_for('stats', season=season, competition=c) }}">{{ c }}</a>
   {% endfor %}
 </div>
 {% endif %}
 
 {# ---------- あなたの成績 ---------- #}
-<div class="card shadow-sm mb-3 border-success">
+<div class="card shadow-sm mb-3 border-team">
   <div class="card-body py-3">
     <h2 class="h6 text-muted">あなたの成績</h2>
     <div class="row text-center g-0">

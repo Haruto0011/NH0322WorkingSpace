@@ -7,10 +7,12 @@
   <!-- Bootstrap 5.3.3 は static/ に同梱（講義資料と同じ方式。ネット環境に左右されない） -->
   <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  {# config.py の TEAM_COLOR をチームカラーとして全ページに適用する #}
+  <style>:root { --team: {{ team_color }}; }</style>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-md navbar-dark bg-success">
+<nav class="navbar navbar-expand-md navbar-dark bg-team">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">⚽ {{ team_name }}</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"

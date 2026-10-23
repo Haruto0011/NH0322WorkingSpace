@@ -10,6 +10,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # チーム名（画面の左上やタイトルに出る）
 TEAM_NAME = "〇〇FC"
 
+# チームカラー（ナビバー・ボタンなどのメインカラー）。CSSの色指定（#rrggbb）
+TEAM_COLOR = "#c8102e"
+
 # 今のシーズン。予定を追加するときの初期値になる（年が変わったらここを直す）
 CURRENT_SEASON = "2026"
 

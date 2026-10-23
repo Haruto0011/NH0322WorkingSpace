@@ -9,6 +9,11 @@ create table if not exists users (
   role       text not null default 'member',  -- 'admin'(管理者) / 'member'
   number     integer,                         -- 背番号
   position   text,                            -- GK / DF / MF / FW
+  height_cm  integer,                         -- 身長
+  weight_kg  integer,                         -- 体重
+  birthdate  date,                            -- 生年月日
+  foot       text,                            -- 利き足 '右' / '左' / '両'
+  intro      text,                            -- 自己紹介・ひとこと
   created_at timestamp default current_timestamp
 );
 
