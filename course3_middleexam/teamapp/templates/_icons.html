@@ -1,5 +1,4 @@
-{# 下タブバーなどで使うアイコン（Bootstrap Icons 1.11.3, MIT License）。
-   使う側: {% from "_icons.html" import icon %}  →  {{ icon('home') }} #}
+{# Inline SVG icons (Bootstrap Icons 1.11.3, MIT). Usage: {% from "_icons.html" import icon %} {{ icon('home') }} #}
 {% macro icon(name, size=22) -%}
 <svg xmlns="http://www.w3.org/2000/svg" width="{{ size }}" height="{{ size }}" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
 {%- if name == 'home' -%}

@@ -1,84 +1,82 @@
--- 手元(SQLite)用のテーブル定義。python init_db.py で実行される
--- サーバ(PostgreSQL)用は schema_postgres.sql（内容は同じ、型名だけ違う）
+-- Schema for SQLite (development). Keep in sync with schema_postgres.sql.
 
 create table if not exists users (
   uid        integer primary key autoincrement,
   uname      text not null,
   email      text not null unique,
-  pw         text not null,                   -- ハッシュ化したパスワード
-  role       text not null default 'member',  -- 'admin'(管理者) / 'member'
-  number     integer,                         -- 背番号
-  position   text,                            -- GK / DF / MF / FW
-  height_cm  integer,                         -- 身長
-  weight_kg  integer,                         -- 体重
-  birthdate  date,                            -- 生年月日
-  foot       text,                            -- 利き足 '右' / '左' / '両'
-  intro      text,                            -- 自己紹介・ひとこと
-  captain    integer not null default 0,      -- 1 ならキャプテン
+  pw         text not null,                   -- password hash
+  role       text not null default 'member',  -- 'admin' | 'member'
+  number     integer,                         -- shirt number
+  position   text,                            -- GK | DF | MF | FW
+  height_cm  integer,
+  weight_kg  integer,
+  birthdate  date,
+  foot       text,                            -- preferred foot
+  intro      text,
+  captain    integer not null default 0,
   created_at timestamp default current_timestamp
 );
 
 create table if not exists events (
   eid        integer primary key autoincrement,
-  etype      text not null,                   -- 'practice' / 'match' / 'other'
+  etype      text not null,                   -- 'practice' | 'match' | 'other'
   title      text not null,
   event_date date not null,
   start_time time,
   end_time   time,
   place      text,
-  opponent   text,                            -- 試合のときだけ
+  opponent   text,                            -- matches only
   note       text,
   created_by integer references users(uid),
-  cancelled  integer not null default 0,    -- 1 なら中止
-  season     text,                          -- '2026' など。スタッツの集計単位
-  competition text                          -- '東京都リーグ' など（試合のときだけ）
+  cancelled  integer not null default 0,
+  season     text,                            -- e.g. '2026'; stats are grouped by season
+  competition text                            -- e.g. league / cup name (matches only)
 );
 
--- 出欠：1人1予定につき1行（eid, uid の組み合わせがキー）
+-- One row per member per event; no row means unanswered.
 create table if not exists attendance (
   eid        integer not null references events(eid),
   uid        integer not null references users(uid),
-  status     text not null,                   -- 'yes'(出席) / 'no'(欠席)。未回答は行がない
+  status     text not null,                   -- 'yes' | 'no'
   comment    text,
   updated_at timestamp default current_timestamp,
   primary key (eid, uid)
 );
 
--- 試合結果（1試合につき1行。前半/後半のスコア、PK戦、MVP）
 create table if not exists match_results (
   eid        integer primary key references events(eid),
-  our_1h     integer not null default 0,    -- 自チーム 前半
-  our_2h     integer not null default 0,    -- 自チーム 後半
-  opp_1h     integer not null default 0,    -- 相手 前半
-  opp_2h     integer not null default 0,    -- 相手 後半
-  our_pk     integer,                       -- PK戦（なければ NULL）
+  our_1h     integer not null default 0,      -- goals for, first half
+  our_2h     integer not null default 0,
+  opp_1h     integer not null default 0,      -- goals against, first half
+  opp_2h     integer not null default 0,
+  our_pk     integer,                         -- penalty shoot-out (null if none)
   opp_pk     integer,
   mvp_uid    integer references users(uid),
   memo       text,
   updated_at timestamp default current_timestamp
 );
 
--- 得点（1ゴール1行。相手の得点も side='opp' で記録する）
+-- One row per goal, for both sides.
 create table if not exists goals (
   gid        integer primary key autoincrement,
   eid        integer not null references events(eid),
-  side       text not null,                 -- 'our' / 'opp'
-  scorer_uid integer references users(uid), -- 得点者（side='our' のとき）
-  assist_uid integer references users(uid), -- アシスト（任意）
-  half       integer not null default 1,    -- 1=前半 / 2=後半
-  minute     integer,                       -- その半分の中での分（任意）
-  note       text                           -- 'PK' 'オウンゴール' など
+  side       text not null,                   -- 'our' | 'opp'
+  scorer_uid integer references users(uid),   -- our goals only
+  assist_uid integer references users(uid),
+  half       integer not null default 1,      -- 1 | 2
+  minute     integer,
+  note       text                             -- e.g. 'PK', 'OG'
 );
 
--- 投稿（お知らせ）とコメント
 create table if not exists posts (
   pid        integer primary key autoincrement,
-  uid        integer references users(uid),   -- 投稿者
+  uid        integer references users(uid),
   title      text,
   body       text not null,
-  pinned     integer not null default 0,      -- 1 なら上部に固定（管理者）
+  pinned     integer not null default 0,
   created_at timestamp not null
 );
+
 create table if not exists comments (
   cid        integer primary key autoincrement,
   pid        integer not null references posts(pid),
@@ -87,19 +85,18 @@ create table if not exists comments (
   created_at timestamp not null
 );
 
--- 出場メンバー（試合ごと）
 create table if not exists lineups (
   eid        integer not null references events(eid),
   uid        integer not null references users(uid),
-  role       text not null,                   -- 'starter'(先発) / 'sub'(控え)
+  role       text not null,                   -- 'starter' | 'sub'
   primary key (eid, uid)
 );
 
--- 写真（予定ごと）。ファイルは static/uploads/<eid>/ に保存
+-- Files are stored under static/uploads/<eid>/.
 create table if not exists photos (
   phid       integer primary key autoincrement,
   eid        integer not null references events(eid),
-  uid        integer references users(uid),   -- アップロードした人
+  uid        integer references users(uid),
   filename   text not null,
   caption    text,
   created_at timestamp not null

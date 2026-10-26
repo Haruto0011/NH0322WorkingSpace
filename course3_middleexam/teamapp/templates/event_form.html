@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-{# 追加と編集で共通のフォーム。編集のときは ev に既存の値が入ってくる #}
+{# Shared by create and edit; ``ev`` holds existing values when editing. #}
 
 <h1 class="h5 mb-3">{{ title }}</h1>
 
@@ -43,7 +43,7 @@
           <label class="form-label">シーズン</label>
           <input type="text" class="form-control" name="season" list="season-list"
                  value="{{ ev.season if ev and ev.season else seasons[0] }}">
-          {# datalist: 入力欄をタップすると過去に使った値が候補に出る #}
+          {# datalist offers previously used values as suggestions. #}
           <datalist id="season-list">
             {% for s in seasons %}<option value="{{ s }}">{% endfor %}
           </datalist>
@@ -67,7 +67,7 @@
         <textarea class="form-control" name="note" rows="3" placeholder="集合時間・持ち物など">{{ ev.note if ev and ev.note else '' }}</textarea>
       </div>
       {% if not ev or not ev.eid %}
-      {# 繰り返し作成（新規のときだけ）。チェックを入れると回数と間隔の欄が出る #}
+      {# Repeat options (create only) #}
       <div class="border rounded p-2 mb-3 bg-light">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" name="repeat" id="repeat"

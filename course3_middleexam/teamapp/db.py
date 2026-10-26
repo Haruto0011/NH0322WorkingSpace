@@ -1,10 +1,9 @@
 """
-DBアクセスをここに集約する。
-app.py 側は db.query(...) / db.execute(...) だけを使い、
-SQLite か PostgreSQL かは config.DB_KIND を見てこのファイルが吸収する。
+Thin database layer that hides the SQLite / PostgreSQL difference.
 
-・プレースホルダは %s で統一して書く（psycopg2 の書き方）。SQLite のときは ? に置き換える
-・取り出した行は row["列名"] で参照できる（テンプレートでは row.列名 でも可）
+Write SQL with ``%s`` placeholders (psycopg2 style); on SQLite they are
+rewritten to ``?``. Rows support ``row["column"]`` access on both engines.
+One connection is opened per request and closed on teardown.
 """
 import sqlite3
 
@@ -14,28 +13,23 @@ import config
 
 
 def convert(sql):
-    """%s プレースホルダを、SQLite のときだけ ? に置き換える"""
-    if config.DB_KIND == "sqlite":
-        return sql.replace("%s", "?")
-    return sql
+    return sql.replace("%s", "?") if config.DB_KIND == "sqlite" else sql
 
 
 def get_conn():
-    """新しいDB接続を作って返す（seed.py など Flask の外からも使う）"""
+    """Open a new connection (also used by CLI scripts outside a request)."""
     if config.DB_KIND == "sqlite":
         conn = sqlite3.connect(config.SQLITE_PATH)
-        conn.row_factory = sqlite3.Row          # row["列名"] で取れるようにする
-        conn.execute("pragma foreign_keys = on")  # 外部キー制約を有効にする（SQLiteは初期OFF）
+        conn.row_factory = sqlite3.Row
+        conn.execute("pragma foreign_keys = on")
         return conn
 
     import psycopg2
     import psycopg2.extras
-    # RealDictCursor: 行を辞書で返す（row["列名"] で取れる）
     return psycopg2.connect(config.POSTGRES_DSN, cursor_factory=psycopg2.extras.RealDictCursor)
 
 
 def get_db():
-    """1リクエストにつき1接続を使い回す"""
     if "db" not in g:
         g.db = get_conn()
     return g.db
@@ -48,12 +42,11 @@ def close_db(e=None):
 
 
 def init_app(app):
-    # リクエストが終わったら接続を閉じる
     app.teardown_appcontext(close_db)
 
 
 def query(sql, params=(), one=False):
-    """SELECT 用。one=True なら最初の1行（なければ None）を返す"""
+    """Run a SELECT. Returns a list of rows, or the first row / None if ``one``."""
     cur = get_db().cursor()
     cur.execute(convert(sql), params)
     rows = cur.fetchall()
@@ -64,7 +57,7 @@ def query(sql, params=(), one=False):
 
 
 def execute(sql, params=()):
-    """INSERT / UPDATE / DELETE 用。実行後に commit する"""
+    """Run an INSERT / UPDATE / DELETE and commit."""
     conn = get_db()
     cur = conn.cursor()
     cur.execute(convert(sql), params)

@@ -3,7 +3,7 @@
 
 <a href="{{ url_for('members') }}" class="text-decoration-none small">&larr; メンバー一覧</a>
 
-{# ---------- プロフィール ---------- #}
+{# Profile #}
 <div class="card shadow-sm my-2">
   <div class="card-body">
     <div class="d-flex align-items-center gap-3 mb-3">
@@ -40,7 +40,7 @@
   </div>
 </div>
 
-{# ---------- 成績 ---------- #}
+{# Stats #}
 <div class="card shadow-sm mb-2">
   <div class="card-body">
     <h2 class="h6 d-flex justify-content-between">
@@ -75,7 +75,7 @@
   </div>
 </div>
 
-{# ---------- 得点した試合・MVPの試合 ---------- #}
+{# Matches scored in / MVP awards #}
 {% if scoring or mvp_matches %}
 <div class="row g-2">
   {% if scoring %}

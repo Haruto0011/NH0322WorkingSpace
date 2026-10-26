@@ -2,7 +2,7 @@
 {% from "_macros.html" import etype_badge with context %}
 {% block content %}
 
-{# メンバーを「チップ」で並べる部品（出席/欠席/未回答の各タブで使う） #}
+{# Member chips for the attendance tabs. #}
 {% macro member_chips(list, empty_text) -%}
   {% if list %}
   <div class="d-flex flex-wrap gap-2">
@@ -26,7 +26,7 @@
 <div class="alert alert-dark py-2 my-2 mb-0"><strong>この予定は中止になりました。</strong></div>
 {% endif %}
 
-{# ---------- 予定の情報 ---------- #}
+{# Event details #}
 <div class="card shadow-sm my-2 {% if ev.cancelled %}event-cancelled{% endif %}">
   <div class="card-body">
     {% if ev.cancelled %}<span class="badge bg-dark">中止</span>{% endif %}
@@ -73,7 +73,7 @@
   </div>
 </div>
 
-{# ---------- 試合結果（試合のときだけ） ---------- #}
+{# Match result (matches only) #}
 {% if ev.etype == 'match' and not ev.cancelled %}
 <div class="card shadow-sm mb-2">
   <div class="card-body">
@@ -130,7 +130,7 @@
 </div>
 {% endif %}
 
-{# ---------- 出場メンバー（試合で、登録があるときだけ） ---------- #}
+{# Lineup (matches with a saved lineup) #}
 {% if lineup and (lineup.starter or lineup.sub) %}
 <div class="card shadow-sm mb-2">
   <div class="card-body">
@@ -156,14 +156,14 @@
 </div>
 {% endif %}
 
-{# ---------- 自分の出欠（中止のときは出さない） ---------- #}
+{# Own attendance (hidden when cancelled) #}
 {% if not ev.cancelled %}
 <div class="card shadow-sm mb-2 {% if mine and mine.status %}answered-{{ mine.status }}{% endif %}">
   <div class="card-body">
     <h2 class="h6">あなたの出欠</h2>
 
     {% if mine and mine.status %}
-    {# 回答済み：結果を大きく見せて、フォームは「回答を修正する」で開く #}
+    {# Answered: show the answer, collapse the form behind an edit button. #}
     <div class="answered d-flex align-items-center justify-content-between gap-2">
       <div>
         <div class="answered-label">{{ '✅ 出席' if mine.status == 'yes' else '❌ 欠席' }} <small>と回答済み</small></div>
@@ -192,7 +192,7 @@
 </div>
 {% endif %}
 
-{# ---------- みんなの出欠：出席 / 欠席 / 未回答 のタブ ---------- #}
+{# Everyone's attendance: yes / no / unanswered tabs #}
 <div class="card shadow-sm">
   <div class="card-body">
     <h2 class="h6 mb-2">みんなの出欠</h2>
@@ -221,7 +221,7 @@
   </div>
 </div>
 
-{# ---------- 写真 ---------- #}
+{# Photos #}
 <div class="card shadow-sm mt-2" id="photos">
   <div class="card-body">
     <h2 class="h6 d-flex justify-content-between align-items-baseline">

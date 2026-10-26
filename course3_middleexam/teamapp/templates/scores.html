@@ -3,7 +3,7 @@
 
 <h1 class="h5 mb-3">スコア</h1>
 
-{# ---------- シーズン切り替え ---------- #}
+{# Season tabs #}
 {% if seasons %}
 <ul class="nav nav-underline mb-3">
   {% for s in seasons %}
@@ -14,7 +14,7 @@
 </ul>
 {% endif %}
 
-{# ---------- 大会で絞り込み ---------- #}
+{# Competition filter #}
 {% if competitions %}
 <div class="d-flex flex-wrap gap-2 mb-3">
   <a class="btn btn-sm {% if not competition %}btn-team{% else %}btn-outline-team{% endif %}"
@@ -26,7 +26,7 @@
 </div>
 {% endif %}
 
-{# ---------- 成績まとめ ---------- #}
+{# Summary #}
 <div class="card shadow-sm mb-3">
   <div class="card-body py-3">
     <div class="row text-center g-0">
@@ -39,7 +39,7 @@
   </div>
 </div>
 
-{# ---------- 試合ごとの結果 ---------- #}
+{# Results #}
 {% if matches %}
 <div class="list-group shadow-sm">
   {% for m in matches %}

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 
-{# ランキング1枚分の部品。上位5人を表示し、残りは「すべて見る」で開く #}
+{# Ranking card: top five visible, the rest collapsed. #}
 {% macro ranking(title, rows, unit, cid, rate_base=None) -%}
 <div class="card shadow-sm h-100">
   <div class="card-body">
@@ -32,7 +32,7 @@
 
 <h1 class="h5 mb-3">スタッツ</h1>
 
-{# ---------- シーズン / 通算 ---------- #}
+{# Season / all-time tabs #}
 <ul class="nav nav-underline mb-3">
   {% for s in seasons %}
   <li class="nav-item">
@@ -44,7 +44,7 @@
   </li>
 </ul>
 
-{# ---------- 大会で絞り込み（シーズン選択時のみ） ---------- #}
+{# Competition filter (season view only) #}
 {% if competitions %}
 <div class="d-flex flex-wrap gap-2 mb-3">
   <a class="btn btn-sm {% if not competition %}btn-team{% else %}btn-outline-team{% endif %}"
@@ -56,7 +56,7 @@
 </div>
 {% endif %}
 
-{# ---------- あなたの成績 ---------- #}
+{# Own stats #}
 <div class="card shadow-sm mb-3 border-team">
   <div class="card-body py-3">
     <h2 class="h6 text-muted">あなたの成績</h2>
@@ -73,7 +73,7 @@
   </div>
 </div>
 
-{# ---------- チーム成績 ---------- #}
+{# Team record #}
 <div class="card shadow-sm mb-3">
   <div class="card-body py-3">
     <h2 class="h6 text-muted d-flex justify-content-between">
@@ -90,7 +90,7 @@
   </div>
 </div>
 
-{# ---------- 選手ランキング ---------- #}
+{# Player rankings #}
 <h2 class="h6 text-muted mb-2">選手ランキング</h2>
 <div class="row g-3">
   <div class="col-12 col-md-6">{{ ranking("⚽ 得点", goals, "点", "goals") }}</div>

@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-{# 自分のプロフィール編集と、管理者による他メンバーの編集で共通。u = 編集対象のユーザ #}
+{# Shared by self-edit and admin edit; ``u`` is the user being edited. #}
 
 {% if is_admin_edit %}
 <a href="{{ url_for('member_detail', uid=u.uid) }}" class="text-decoration-none small">&larr; {{ u.uname }}</a>

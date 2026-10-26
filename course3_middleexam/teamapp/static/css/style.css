@@ -1,12 +1,9 @@
-/* サイト独自の見た目はここに足していく（Bootstrap の上書き） */
+/* Project styles layered on Bootstrap 5.3. Team color comes from --team (set in layout.html). */
 
-/* ---------- チームカラー ----------
-   --team の値は layout.html が config.py の TEAM_COLOR から入れる。
-   ここでは「薄い色」と「濃い色」を --team から作り、ボタンなどの部品を定義する */
+/* ---- Team color ---- */
 :root {
   --team-dark: color-mix(in srgb, var(--team) 80%, black);
   --team-tint: color-mix(in srgb, var(--team) 7%, white);
-  /* リンクの色もチームカラーに */
   --bs-link-color: var(--team);
   --bs-link-hover-color: var(--team-dark);
 }
@@ -25,7 +22,7 @@ a:hover {
 .border-team {
   border-color: var(--team) !important;
 }
-/* Bootstrap 5.3 のボタンは CSS 変数で色が決まるので、変数を差し替えるだけで新しい色のボタンが作れる */
+/* Button variants via Bootstrap's CSS variables */
 .btn-team {
   --bs-btn-color: #fff;
   --bs-btn-bg: var(--team);
@@ -60,21 +57,21 @@ a:hover {
 body {
   padding-bottom: 2rem;
 }
-/* スマホでは下タブバーの分だけ余白を足す（iPhone の下の余白 safe-area も考慮） */
+/* Reserve space for the bottom tab bar on mobile */
 @media (max-width: 767.98px) {
   body {
     padding-bottom: calc(4.2rem + env(safe-area-inset-bottom));
   }
 }
 
-/* ---------- 上のバー ---------- */
+/* ---- Top bar ---- */
 .navbar .nav-link.active {
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: .35em;
 }
 
-/* ---------- スマホ用の下タブバー ---------- */
+/* ---- Bottom tab bar (mobile) ---- */
 .tabbar {
   position: fixed;
   left: 0;
@@ -102,7 +99,7 @@ body {
   font-weight: 600;
 }
 
-/* 管理者用の丸い「＋」ボタン（予定を追加） */
+/* Floating action button */
 .fab {
   position: fixed;
   right: 1rem;
@@ -123,7 +120,7 @@ body {
   background: var(--team-dark);
 }
 
-/* ---------- エラー画面 ---------- */
+/* ---- Error page ---- */
 .error-code {
   font-size: 4.5rem;
   font-weight: 800;
@@ -131,17 +128,17 @@ body {
   color: var(--team);
 }
 
-/* flex の子要素を内容より小さく縮められるようにする（長いタイトルの省略用） */
+/* Allow flex children to shrink below content width (for text-truncate) */
 .min-w-0 {
   min-width: 0;
 }
 
-/* 改行をそのまま表示（予定のメモ用） */
+/* Preserve line breaks in free text */
 .pre-line {
   white-space: pre-line;
 }
 
-/* メンバー一覧の背番号 */
+/* Shirt number badge */
 .number-badge {
   display: inline-block;
   min-width: 2.2em;
@@ -154,12 +151,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* リンク行を少し見やすく */
 .list-group-item-action:hover {
   background-color: var(--team-tint);
 }
 
-/* ---------- 中止になった予定：打ち消し線＋薄く ---------- */
+/* ---- Cancelled events ---- */
 .event-cancelled {
   opacity: .65;
 }
@@ -167,7 +163,7 @@ body {
   text-decoration: line-through;
 }
 
-/* ---------- 出欠タブ（出席 / 欠席 / 未回答） ---------- */
+/* ---- Attendance tabs ---- */
 .att-tabs .nav-link {
   color: #495057;
   background: #f8f9fa;
@@ -187,7 +183,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* メンバーの「チップ」表示（大人数でも横に詰めて並ぶ） */
+/* Member chips */
 .member-chip {
   display: inline-block;
   padding: .3rem .6rem;
@@ -214,7 +210,7 @@ body {
   color: #6c757d;
 }
 
-/* ---------- スコア表示 ---------- */
+/* ---- Scores ---- */
 .score-num {
   font-size: 2.2rem;
   font-weight: 700;
@@ -241,7 +237,7 @@ body {
   margin: 0 auto;
 }
 
-/* ---------- ホーム：ドーナツグラフと勝敗表 ---------- */
+/* ---- Home: donut chart and record table ---- */
 .donut {
   width: 120px;
   height: 120px;
@@ -268,8 +264,8 @@ body {
   vertical-align: middle;
 }
 
-/* ---------- スタッツ：ランキング ---------- */
-/* 行は flex で並べる（Bootstrap の d-flex だと !important が付いて折りたたみ(collapse)が効かなくなるため自前で） */
+/* ---- Stats rankings ----
+   Rows use a local flex rule instead of .d-flex, whose !important would defeat .collapse. */
 .ranking li {
   display: flex;
   align-items: center;
@@ -288,22 +284,22 @@ body {
   text-align: center;
   flex-shrink: 0;
 }
-.ranking .rank-1 { background: #ffc107; color: #212529; }   /* 金 */
-.ranking .rank-2 { background: #adb5bd; color: #fff; }      /* 銀 */
-.ranking .rank-3 { background: #cd7f32; color: #fff; }      /* 銅 */
+.ranking .rank-1 { background: #ffc107; color: #212529; }
+.ranking .rank-2 { background: #adb5bd; color: #fff; }
+.ranking .rank-3 { background: #cd7f32; color: #fff; }
 .ranking .rate {
   width: 3em;
   text-align: right;
 }
 .ranking li.me {
-  background: var(--team-tint);   /* 自分の行をうっすらチームカラーに */
+  background: var(--team-tint);
   margin: 0 -.5rem;
   padding-left: .5rem !important;
   padding-right: .5rem !important;
   border-radius: .3rem;
 }
 
-/* ---------- メンバー詳細 ---------- */
+/* ---- Member page ---- */
 .big-number {
   width: 3.4rem;
   height: 3.4rem;
@@ -324,10 +320,10 @@ body {
   padding: .35rem .25rem;
 }
 
-/* ---------- 月カレンダー ---------- */
+/* ---- Month calendar ---- */
 .calendar {
   width: 100%;
-  table-layout: fixed;          /* 7列を等幅に */
+  table-layout: fixed;
   border-collapse: collapse;
 }
 .calendar th {
@@ -362,7 +358,7 @@ body {
   background: var(--team);
   color: #fff;
 }
-/* 日付の中の予定（タップで詳細へ） */
+/* Event pills inside a day cell */
 .cal-event {
   display: block;
   overflow: hidden;
@@ -392,16 +388,16 @@ body {
 .legend.match    { background: #dc3545; }
 .legend.other    { background: #6c757d; }
 @media (max-width: 767.98px) {
-  .cal-event .t { display: none; }      /* スマホでは時刻を隠して予定名を見せる */
+  .cal-event .t { display: none; }      /* hide times on phones, keep titles */
 }
 @media (min-width: 768px) {
   .calendar td { height: 6rem; font-size: .8rem; }
 }
 
-/* ---------- 投稿 ---------- */
+/* ---- Posts ---- */
 .post-excerpt {
   display: -webkit-box;
-  -webkit-line-clamp: 2;        /* 2行で省略 */
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   font-size: .9rem;
@@ -411,7 +407,7 @@ body {
   border-top: 1px solid #eee;
 }
 
-/* ---------- 出場メンバーの編集 ---------- */
+/* ---- Lineup editor ---- */
 .lineup-row {
   display: flex;
   align-items: center;
@@ -436,7 +432,7 @@ body {
   text-align: center;
 }
 
-/* ---------- 写真 ---------- */
+/* ---- Photos ---- */
 .photo-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -470,7 +466,7 @@ body {
   opacity: .85;
 }
 
-/* ---------- 出欠：回答済みの表示 ---------- */
+/* ---- Attendance: answered state ---- */
 .answered-label {
   font-size: 1.25rem;
   font-weight: 700;
@@ -481,13 +477,13 @@ body {
   color: #6c757d;
 }
 .card.answered-yes {
-  border-left: .35rem solid #198754;     /* 出席＝緑の帯 */
+  border-left: .35rem solid #198754;
 }
 .card.answered-no {
-  border-left: .35rem solid #6c757d;     /* 欠席＝灰色の帯 */
+  border-left: .35rem solid #6c757d;
 }
 
-/* ---------- キャプテンマーク（腕章風の黄色い C） ---------- */
+/* ---- Captain mark ---- */
 .captain-mark {
   display: inline-block;
   min-width: 1.5em;

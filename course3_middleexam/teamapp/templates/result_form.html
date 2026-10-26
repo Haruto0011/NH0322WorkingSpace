@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
 {% block content %}
-{# 試合結果の入力画面（管理者のみ）。上：スコア・MVP、下：得点の追加/削除 #}
+{# Admin: score, goals and lineup for one match. #}
 
 <a href="{{ url_for('event_detail', eid=ev.eid) }}" class="text-decoration-none small">&larr; {{ ev.title }}</a>
 <h1 class="h5 my-2">試合結果の入力</h1>
 <p class="text-muted small">{{ ev.event_date|jdate }} {{ ev.start_time|jtime }}{% if ev.opponent %} ／ vs {{ ev.opponent }}{% endif %}{% if ev.competition %} ／ {{ ev.competition }}{% endif %}</p>
 
-{# ---------- スコア ---------- #}
+{# Score #}
 <div class="card shadow-sm mb-3">
   <div class="card-body">
     <h2 class="h6">スコア</h2>
@@ -61,7 +61,7 @@
   </div>
 </div>
 
-{# ---------- 得点 ---------- #}
+{# Goals #}
 <div class="card shadow-sm mb-3">
   <div class="card-body">
     <h2 class="h6">得点</h2>
@@ -128,7 +128,7 @@
   </div>
 </div>
 
-{# ---------- 出場メンバー ---------- #}
+{# Lineup #}
 <div class="card shadow-sm mb-3" id="lineup">
   <div class="card-body">
     <h2 class="h6">出場メンバー</h2>
@@ -159,7 +159,7 @@
 </div>
 
 <script>
-  // 「相手の得点」を選んだら得点者・アシストの欄を隠す
+  // Hide scorer / assist fields when recording an opponent goal.
   document.querySelectorAll('input[name="side"]').forEach(function (radio) {
     radio.addEventListener('change', function () {
       var ours = document.getElementById('side-our').checked;

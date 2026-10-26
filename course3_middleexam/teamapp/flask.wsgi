@@ -1,12 +1,7 @@
-# muds.gdl.jp にデプロイするときに使うファイル（手元で動かすときは使わない）
-# 講義資料のとおり、石橋先生にこのファイルのパスを申請する
-#   User ID: s0000001
-#   Project Directory: /home/s0000001/teamapp/
-#   WSGI Path: /home/s0000001/teamapp/flask.wsgi
+# mod_wsgi entry point. Register this file's path with the server administrator.
 import os
 import sys
 
-DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, DIR)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app import app as application
+from app import app as application  # noqa: E402

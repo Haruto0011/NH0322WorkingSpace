@@ -3,7 +3,7 @@
 
 <h1 class="h5 mb-3">メンバー <small class="text-muted">({{ total }}人)</small></h1>
 
-{# ポジションごとに表示。各行をタップすると選手ページへ #}
+{# Grouped by position; rows link to the member page. #}
 {% for pos in POSITIONS + [None] %}
 {% set list = groups[pos] %}
 {% if list %}

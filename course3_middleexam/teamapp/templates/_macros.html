@@ -1,5 +1,4 @@
-{# 複数の画面で使い回す小さな部品。
-   使う側: {% from "_macros.html" import etype_badge, status_badge, event_row with context %} #}
+{# Shared partials. Usage: {% from "_macros.html" import etype_badge, status_badge, event_row with context %} #}
 
 {% macro etype_badge(etype) -%}
 <span class="badge {{ {'match': 'bg-danger', 'practice': 'bg-primary'}.get(etype, 'bg-secondary') }}">{{ ETYPES.get(etype, etype) }}</span>
@@ -11,7 +10,7 @@
 {% else %}<span class="badge bg-white text-muted border">未回答</span>{% endif %}
 {%- endmacro %}
 
-{# 予定一覧の1行（ホームと予定一覧で共通）。中止の予定は打ち消し線 #}
+{# One row of the event list (home, list, calendar). #}
 {% macro event_row(e) -%}
 <a href="{{ url_for('event_detail', eid=e.eid) }}"
    class="list-group-item list-group-item-action py-3 {% if e.cancelled %}event-cancelled{% endif %}">

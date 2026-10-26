@@ -3,7 +3,7 @@
 
 <a href="{{ url_for('posts') }}" class="text-decoration-none small">&larr; 投稿一覧</a>
 
-{# ---------- 投稿本文 ---------- #}
+{# Post #}
 <div class="card shadow-sm my-2">
   <div class="card-body">
     {% if post.pinned %}<span class="badge bg-team mb-2">📌 固定</span>{% endif %}
@@ -27,7 +27,7 @@
   </div>
 </div>
 
-{# ---------- コメント ---------- #}
+{# Comments #}
 <div class="card shadow-sm">
   <div class="card-body">
     <h2 class="h6">コメント <small class="text-muted">({{ comments|length }})</small></h2>

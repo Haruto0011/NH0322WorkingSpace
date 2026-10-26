@@ -14,7 +14,7 @@
 </div>
 {% endif %}
 
-{# ---------- 未回答の予定があれば目立たせる ---------- #}
+{# Pending attendance reminder #}
 {% if pending %}
 <a href="{{ url_for('events') }}" class="alert alert-warning d-flex justify-content-between align-items-center text-decoration-none py-2">
   <span>📣 出欠がまだの予定が <strong>{{ pending }}件</strong> あります</span>
@@ -22,7 +22,7 @@
 </a>
 {% endif %}
 
-{# ---------- 直近の予定 ---------- #}
+{# Upcoming events #}
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h2 class="h6 text-muted mb-0">直近の予定</h2>
   {% if g.user.role == 'admin' %}
@@ -38,7 +38,7 @@
 {% endif %}
 <a href="{{ url_for('events') }}" class="btn btn-outline-team btn-sm w-100 mb-4">すべての予定を見る</a>
 
-{# ---------- 投稿（最新3件） ---------- #}
+{# Latest posts #}
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h2 class="h6 text-muted mb-0">投稿</h2>
   <a href="{{ url_for('post_new') }}" class="btn btn-outline-team btn-sm">＋ 投稿する</a>
@@ -65,7 +65,7 @@
 </div>
 
 <div class="row g-3">
-  {# ---------- 最新の試合結果 ---------- #}
+  {# Latest result #}
   <div class="col-12 col-md-6">
     <div class="card shadow-sm h-100">
       <div class="card-body">
@@ -90,7 +90,7 @@
     </div>
   </div>
 
-  {# ---------- 今シーズンの成績（ドーナツグラフ） ---------- #}
+  {# Season record (donut chart) #}
   <div class="col-12 col-md-6">
     <div class="card shadow-sm h-100">
       <div class="card-body">
@@ -99,7 +99,7 @@
           <a href="{{ url_for('scores') }}" class="small text-decoration-none">スコア一覧 &rsaquo;</a>
         </h2>
         <div class="d-flex align-items-center gap-3">
-          {# SVG で描くドーナツ。円周をなぞる線を stroke-dasharray で区切って3色に分ける #}
+          {# Donut drawn with stroked circles; segment lengths come from _donut() #}
           <svg viewBox="0 0 100 100" class="donut" role="img" aria-label="勝敗グラフ">
             <circle cx="50" cy="50" r="40" fill="none" stroke="#e9ecef" stroke-width="12"/>
             {% for s in donut %}

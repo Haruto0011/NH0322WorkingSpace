@@ -1,44 +1,38 @@
 """
-設定はすべてここにまとめる。
-手元で動かす → DB_KIND = "sqlite"（このままでOK）
-サーバにデプロイ → DB_KIND = "postgres" にして POSTGRES_DSN と FORCE_HTTPS を直す
+Application settings. Edit this file for your team and environment.
+
+Development: DB_KIND = "sqlite" (default, no setup required).
+Production:  DB_KIND = "postgres", set POSTGRES_DSN, FORCE_HTTPS = True,
+             DEMO_MODE = False, and replace SECRET_KEY / OWNER_PASSWORD.
 """
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# チーム名（画面の左上やタイトルに出る）
+# --- Team -------------------------------------------------------------------
 TEAM_NAME = "MUDS FC"
+TEAM_COLOR = "#c8102e"      # primary UI color (CSS hex)
+CURRENT_SEASON = "2026"     # default season for new events; update each year
 
-# チームカラー（ナビバー・ボタンなどのメインカラー）。CSSの色指定（#rrggbb）
-TEAM_COLOR = "#c8102e"
-
-# 今のシーズン。予定を追加するときの初期値になる（年が変わったらここを直す）
-CURRENT_SEASON = "2026"
-
-# デモモード（課題提出用）
-#   True  : ログインしていない人を DEMO_USER_EMAIL のユーザとして扱う → URLを開くだけで全機能が使える
-#   False : 通常どおりログインが必要（実際にチームで運用するときはこちら）
+# --- Demo mode (for review / evaluation) -------------------------------------
+# When True, anonymous visitors are treated as DEMO_USER_EMAIL and the login
+# button signs in OWNER_EMAIL without a password. Set False for real use.
 DEMO_MODE = True
-DEMO_USER_EMAIL = "admin@example.com"   # seed.py が作る管理者
+DEMO_USER_EMAIL = "admin@example.com"   # created by seed.py
 
-# 自分（オーナー）のアカウント。seed.py がこの内容で管理者として作る。
-# デモモード中は「ログイン」ボタンを押すだけでこのアカウントに入れる（本番では通常のログイン画面になる）
+# --- Owner account (created as admin by seed.py) -----------------------------
 OWNER_NAME = "はると"
-OWNER_EMAIL = "harutosr1@gmail.com"
-OWNER_PASSWORD = "pass1234"             # 本番運用の前に必ず変える
+OWNER_EMAIL = "example＠example.com"  # change before production
+OWNER_PASSWORD = "pass1234"             # change before production
 
-# セッション（ログイン状態）の暗号化に使う鍵。好きな文字列に変えてもよい
-SECRET_KEY = "6c424ac5d16d778bc1b14afa2c02b1c3"
+# --- Security ----------------------------------------------------------------
+SECRET_KEY = "6c424ac5d16d778bc1b14afa2c02b1c3"   # session signing key; change for production
+FORCE_HTTPS = False                              # redirect http -> https (enable in production)
 
-# "sqlite" : 手元のPCで動かすとき（インストール不要、team.db というファイルに保存される）
-# "postgres" : muds.gdl.jp にデプロイするとき
-DB_KIND = "sqlite"
-
+# --- Database ----------------------------------------------------------------
+DB_KIND = "sqlite"                               # "sqlite" | "postgres"
 SQLITE_PATH = os.path.join(BASE_DIR, "team.db")
-
-# デプロイ時に自分のものへ書き換える（講義資料の psycopg2.connect(...) と同じ書式）
 POSTGRES_DSN = "host=localhost dbname=s0000001 user=s0000001 password=XXXXXX"
 
-# サーバでは True にすると http でアクセスされても https に飛ばす（講義資料の before_request と同じ）
-FORCE_HTTPS = False
+# --- Development server ------------------------------------------------------
+DEV_PORT = 5050   # 5000 is taken by AirPlay Receiver on recent macOS
