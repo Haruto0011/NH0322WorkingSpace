@@ -469,3 +469,20 @@ body {
   line-height: 1.4;
   opacity: .85;
 }
+
+/* ---------- 出欠：回答済みの表示 ---------- */
+.answered-label {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.answered-label small {
+  font-size: .8rem;
+  font-weight: 400;
+  color: #6c757d;
+}
+.card.answered-yes {
+  border-left: .35rem solid #198754;     /* 出席＝緑の帯 */
+}
+.card.answered-no {
+  border-left: .35rem solid #6c757d;     /* 欠席＝灰色の帯 */
+}

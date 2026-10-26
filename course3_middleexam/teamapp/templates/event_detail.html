@@ -157,10 +157,24 @@
 
 {# ---------- 自分の出欠（中止のときは出さない） ---------- #}
 {% if not ev.cancelled %}
-<div class="card shadow-sm mb-2">
+<div class="card shadow-sm mb-2 {% if mine and mine.status %}answered-{{ mine.status }}{% endif %}">
   <div class="card-body">
     <h2 class="h6">あなたの出欠</h2>
-    <form method="post" action="{{ url_for('attend', eid=ev.eid) }}">
+
+    {% if mine and mine.status %}
+    {# 回答済み：結果を大きく見せて、フォームは「回答を修正する」で開く #}
+    <div class="answered d-flex align-items-center justify-content-between gap-2">
+      <div>
+        <div class="answered-label">{{ '✅ 出席' if mine.status == 'yes' else '❌ 欠席' }} <small>と回答済み</small></div>
+        {% if mine.comment %}<div class="small text-muted">💬 {{ mine.comment }}</div>{% endif %}
+      </div>
+      <button class="btn btn-sm btn-outline-secondary flex-shrink-0" type="button"
+              data-bs-toggle="collapse" data-bs-target="#attend-form" aria-expanded="false">回答を修正する</button>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('attend', eid=ev.eid) }}"
+          id="attend-form" class="collapse {% if not (mine and mine.status) %}show{% else %}mt-3{% endif %}">
       <div class="btn-group w-100 mb-2" role="group" aria-label="出欠">
         {% for key, label in STATUSES.items() %}
         <input type="radio" class="btn-check" name="status" id="st-{{ key }}" value="{{ key }}"
@@ -171,7 +185,7 @@
       </div>
       <input type="text" class="form-control mb-2" name="comment" maxlength="100"
              placeholder="ひとこと（任意）" value="{{ mine.comment if mine and mine.comment else '' }}">
-      <button class="btn btn-team w-100">回答する</button>
+      <button class="btn btn-team w-100">{{ '回答を更新する' if mine and mine.status else '回答する' }}</button>
     </form>
   </div>
 </div>

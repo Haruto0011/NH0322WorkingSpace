@@ -85,6 +85,7 @@
   <a href="{{ url_for('scores') }}" class="{% if request.endpoint in ('scores', 'result_edit') %}active{% endif %}">{{ icon('trophy') }}<span>スコア</span></a>
   <a href="{{ url_for('stats') }}" class="{% if request.endpoint == 'stats' %}active{% endif %}">{{ icon('chart') }}<span>スタッツ</span></a>
   <a href="{{ url_for('members') }}" class="{% if request.endpoint and request.endpoint.startswith('member') or request.endpoint == 'profile' %}active{% endif %}">{{ icon('people') }}<span>メンバー</span></a>
+  <a href="{{ url_for('album') }}" class="{% if request.endpoint in ('album', 'photo_upload') %}active{% endif %}">{{ icon('album') }}<span>アルバム</span></a>
 </nav>
 {% if g.user.role == 'admin' and request.endpoint in ('index', 'events') %}
 {# 管理者には「＋」の丸いボタン（予定を追加） #}
