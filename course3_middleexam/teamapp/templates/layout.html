@@ -33,6 +33,8 @@
       <li class="nav-item"><a class="nav-link {% if request.endpoint in ('scores', 'result_edit') %}active{% endif %}" href="{{ url_for('scores') }}">スコア</a></li>
       <li class="nav-item"><a class="nav-link {% if request.endpoint == 'stats' %}active{% endif %}" href="{{ url_for('stats') }}">スタッツ</a></li>
       <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('member') %}active{% endif %}" href="{{ url_for('members') }}">メンバー</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.endpoint and (request.endpoint.startswith('post') or request.endpoint.startswith('comment')) %}active{% endif %}" href="{{ url_for('posts') }}">投稿</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.endpoint == 'album' %}active{% endif %}" href="{{ url_for('album') }}">アルバム</a></li>
       {% if g.user.role == 'admin' %}
       <li class="nav-item"><a class="nav-link" href="{{ url_for('event_new') }}">＋ 予定を追加</a></li>
       {% endif %}

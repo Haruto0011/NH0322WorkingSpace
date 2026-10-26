@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h5 mb-0">投稿</h1>
+  <a href="{{ url_for('post_new') }}" class="btn btn-team btn-sm">＋ 投稿する</a>
+</div>
+
+{% if posts %}
+<div class="list-group shadow-sm">
+  {% for p in posts %}
+  <a href="{{ url_for('post_detail', pid=p.pid) }}" class="list-group-item list-group-item-action py-3">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <div class="min-w-0">
+        {% if p.pinned %}<span class="badge bg-team me-1">📌 固定</span>{% endif %}
+        {% if p.title %}<strong>{{ p.title }}</strong>{% endif %}
+        <div class="post-excerpt text-body">{{ p.body }}</div>
+      </div>
+      <div class="text-end flex-shrink-0 small text-muted">
+        {{ p.author }}<br>{{ p.created_at|jdatetime }}
+        {% if p.comment_count %}<br>💬 {{ p.comment_count }}{% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body text-muted">まだ投稿がありません。最初の投稿をしてみましょう。</div></div>
+{% endif %}
+
+{% endblock %}

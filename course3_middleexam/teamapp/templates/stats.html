@@ -64,6 +64,7 @@
       <div class="col"><div class="summary-num">{{ mine.goals }}</div><small class="text-muted">得点</small></div>
       <div class="col"><div class="summary-num">{{ mine.assists }}</div><small class="text-muted">アシスト</small></div>
       <div class="col"><div class="summary-num">{{ mine.mvps }}</div><small class="text-muted">MVP</small></div>
+      <div class="col"><div class="summary-num">{{ mine.apps }}</div><small class="text-muted">出場</small></div>
       <div class="col border-start">
         <div class="summary-num">{{ mine.attendance }}<small class="fs-6 fw-normal text-muted">/{{ held }}</small></div>
         <small class="text-muted">出席{% if mine.rate is not none %}（{{ mine.rate }}%）{% endif %}</small>
@@ -96,6 +97,7 @@
   <div class="col-12 col-md-6">{{ ranking("🎯 アシスト", assists, "", "assists") }}</div>
   <div class="col-12 col-md-6">{{ ranking("🏅 MVP", mvps, "回", "mvps") }}</div>
   <div class="col-12 col-md-6">{{ ranking("✅ 出席", attendance, "回", "att", rate_base=held) }}</div>
+  <div class="col-12 col-md-6">{{ ranking("👟 出場", apps, "試合", "apps") }}</div>
 </div>
 <p class="small text-muted mt-2 mb-0">出席は、終わった予定（中止を除く {{ held }}件）に「出席」と回答した回数。</p>
 

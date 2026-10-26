@@ -323,3 +323,149 @@ body {
 .player-stats td, .player-stats th {
   padding: .35rem .25rem;
 }
+
+/* ---------- 月カレンダー ---------- */
+.calendar {
+  width: 100%;
+  table-layout: fixed;          /* 7列を等幅に */
+  border-collapse: collapse;
+}
+.calendar th {
+  font-size: .75rem;
+  font-weight: 600;
+  text-align: center;
+  padding: .3rem 0;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+.calendar td {
+  vertical-align: top;
+  height: 4.6rem;
+  padding: .15rem;
+  border: 1px solid #eee;
+  font-size: .7rem;
+}
+.calendar td.empty {
+  background: #f8f9fa;
+}
+.calendar .sun { color: #dc3545; }
+.calendar .sat { color: #0d6efd; }
+.calendar .day {
+  font-weight: 600;
+  padding-left: .1rem;
+}
+.calendar td.today .day {
+  display: inline-block;
+  min-width: 1.5em;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--team);
+  color: #fff;
+}
+/* 日付の中の予定（タップで詳細へ） */
+.cal-event {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-radius: .2rem;
+  padding: 0 .2rem;
+  margin-top: .1rem;
+  color: #fff;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.cal-event .t { opacity: .85; }
+.cal-event.practice { background: #0d6efd; }
+.cal-event.match    { background: #dc3545; }
+.cal-event.other    { background: #6c757d; }
+.cal-event.cancelled { text-decoration: line-through; opacity: .5; }
+.legend {
+  display: inline-block;
+  width: .8em;
+  height: .8em;
+  border-radius: .15em;
+  margin-right: .3em;
+  vertical-align: middle;
+}
+.legend.practice { background: #0d6efd; }
+.legend.match    { background: #dc3545; }
+.legend.other    { background: #6c757d; }
+@media (max-width: 767.98px) {
+  .cal-event .t { display: none; }      /* スマホでは時刻を隠して予定名を見せる */
+}
+@media (min-width: 768px) {
+  .calendar td { height: 6rem; font-size: .8rem; }
+}
+
+/* ---------- 投稿 ---------- */
+.post-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;        /* 2行で省略 */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: .9rem;
+}
+.comment {
+  padding: .5rem 0;
+  border-top: 1px solid #eee;
+}
+
+/* ---------- 出場メンバーの編集 ---------- */
+.lineup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .3rem 0;
+  border-bottom: 1px solid #eee;
+}
+.lineup-row .name {
+  min-width: 0;
+}
+.lineup-row .chip-number {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: .25em;
+  padding: 0 .3em;
+  border-radius: .5em;
+  background: var(--team);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* ---------- 写真 ---------- */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .3rem;
+}
+@media (min-width: 768px) {
+  .photo-grid { grid-template-columns: repeat(5, 1fr); }
+}
+.photo-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: .4rem;
+  background: #eee;
+}
+.photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-del {
+  position: absolute;
+  top: .2rem;
+  right: .2rem;
+}
+.photo-del .btn {
+  padding: 0 .4rem;
+  line-height: 1.4;
+  opacity: .85;
+}

@@ -55,6 +55,11 @@
         <tr><td>🎯 アシスト</td><td class="text-end fw-bold">{{ stats.season.assists }}</td><td class="text-end">{{ stats.total.assists }}</td></tr>
         <tr><td>🏅 MVP</td><td class="text-end fw-bold">{{ stats.season.mvps }}</td><td class="text-end">{{ stats.total.mvps }}</td></tr>
         <tr>
+          <td>👟 出場 <small class="text-muted">(うち先発)</small></td>
+          <td class="text-end fw-bold">{{ stats.season.apps }}<small class="fw-normal text-muted"> ({{ stats.season.starts }})</small></td>
+          <td class="text-end">{{ stats.total.apps }}<small class="text-muted"> ({{ stats.total.starts }})</small></td>
+        </tr>
+        <tr>
           <td>✅ 出席</td>
           <td class="text-end fw-bold">{{ stats.season.attended }}<small class="fw-normal text-muted">/{{ stats.season.held }}{% if stats.season.rate is not none %} ({{ stats.season.rate }}%){% endif %}</small></td>
           <td class="text-end">{{ stats.total.attended }}<small class="text-muted">/{{ stats.total.held }}{% if stats.total.rate is not none %} ({{ stats.total.rate }}%){% endif %}</small></td>

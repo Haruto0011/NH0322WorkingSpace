@@ -11,13 +11,18 @@ DBアクセスは db.py にまとめてある（SQL は PostgreSQL / SQLite 両�
 リンクはすべて url_for() で作る。サーバでは /s0000001/ のような
 サブパスにデプロイされるので、"/events" と直書きすると壊れるため。
 """
+import calendar
 import math
-from datetime import date, timedelta
+import os
+import secrets
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from functools import wraps
 
 from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
                    request, session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 import config
 import db
@@ -25,6 +30,7 @@ import db
 app = Flask(__name__)
 app.config["SECRET_KEY"] = config.SECRET_KEY
 app.permanent_session_lifetime = timedelta(days=30)  # ログイン状態を30日保持
+app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024   # 写真アップロードは1回 40MB まで
 db.init_app(app)
 
 # 画面で使う選択肢。ここを変えれば全画面に反映される
@@ -33,6 +39,8 @@ POSITIONS = ["GK", "DF", "MF", "FW"]
 FEET = ["右", "左", "両"]
 STATUSES = {"yes": "出席", "no": "欠席"}   # 回答していない人は「未回答」扱い
 HALVES = {1: "前半", 2: "後半"}
+LINEUP_ROLES = {"starter": "先発", "sub": "控え"}
+PHOTO_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
 OUTCOMES = {"win": "勝ち", "draw": "引き分け", "loss": "負け"}
 WEEKDAYS = "月火水木金土日"
 
@@ -71,6 +79,7 @@ def inject_globals():
         "STATUSES": STATUSES,
         "HALVES": HALVES,
         "OUTCOMES": OUTCOMES,
+        "LINEUP_ROLES": LINEUP_ROLES,
     }
 
 
@@ -111,6 +120,21 @@ def jdate(v):
 def jtime(v):
     """テンプレート用: 19:00:00 → 19:00"""
     return str(v)[:5] if v else ""
+
+
+@app.template_filter("jdatetime")
+def jdatetime(v):
+    """テンプレート用: 2026-10-26 22:56:00 → 10/26(月) 22:56"""
+    if not v:
+        return ""
+    if isinstance(v, str):
+        v = datetime.fromisoformat(v[:19])
+    return f"{v.month}/{v.day}({WEEKDAYS[v.weekday()]}) {v:%H:%M}"
+
+
+def now_str():
+    """投稿などの作成日時。DBの current_timestamp は SQLite だと世界標準時になるので Python 側で入れる"""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 @app.template_filter("jfulldate")
@@ -242,10 +266,12 @@ def index():
     _, summary = _match_list(season=config.CURRENT_SEASON)
 
     member_count = db.query("select count(*) as c from users", one=True)["c"]
+    latest_posts = db.query(POST_SQL + " order by p.pinned desc, p.created_at desc limit 3")
 
     return render_template("index.html", title="ホーム", events=events, pending=pending,
                            latest=latest, summary=summary, donut=_donut(summary),
-                           season=config.CURRENT_SEASON, member_count=member_count)
+                           season=config.CURRENT_SEASON, member_count=member_count,
+                           posts=latest_posts)
 
 
 @app.route("/events")
@@ -260,6 +286,37 @@ def events():
         EVENT_LIST_SQL + " where e.event_date < %s order by e.event_date desc limit 20",
         (uid, today))
     return render_template("events.html", title="予定", upcoming=upcoming, past=past)
+
+
+@app.route("/events/calendar")
+@login_required
+def events_calendar():
+    """月カレンダー表示。?ym=2026-10 で月を指定（なければ今月）"""
+    today = date.today()
+    try:
+        y, m = (int(x) for x in request.args.get("ym", "").split("-"))
+        date(y, m, 1)
+    except (ValueError, TypeError):
+        y, m = today.year, today.month
+    first = date(y, m, 1)
+    last = date(y, m, calendar.monthrange(y, m)[1])
+
+    rows = db.query(
+        EVENT_LIST_SQL + " where e.event_date between %s and %s order by e.event_date, e.start_time",
+        (g.user["uid"], first.isoformat(), last.isoformat()))
+    by_day = defaultdict(list)           # 日 → その日の予定
+    for r in rows:
+        by_day[int(str(r["event_date"])[8:10])].append(r)
+
+    # 日曜始まりの週ごとの日付リスト（月の外は 0）
+    weeks = calendar.Calendar(firstweekday=6).monthdayscalendar(y, m)
+    prev_ym = (first - timedelta(days=1)).strftime("%Y-%m")
+    next_ym = (last + timedelta(days=1)).strftime("%Y-%m")
+
+    return render_template("events_calendar.html", title=f"{y}年{m}月の予定",
+                           y=y, m=m, weeks=weeks, by_day=by_day, events=rows,
+                           today=today, prev_ym=prev_ym, next_ym=next_ym,
+                           this_ym=today.strftime("%Y-%m"))
 
 
 @app.route("/events/<int:eid>")
@@ -303,9 +360,11 @@ def event_detail(eid):
             opp = result["opp_1h"] + result["opp_2h"]
             score = {"our": our, "opp": opp, "outcome": _outcome(our, opp)}
 
+    lineup = _lineup(eid) if ev["etype"] == "match" else None
     return render_template("event_detail.html", title=ev["title"],
                            ev=ev, groups=groups, counts=counts, mine=mine,
-                           result=result, goals=goals, score=score)
+                           result=result, goals=goals, score=score,
+                           lineup=lineup, photos=_photos(eid))
 
 
 @app.route("/events/<int:eid>/attend", methods=["POST"])
@@ -442,6 +501,8 @@ def event_delete(eid):
     db.execute("delete from attendance where eid = %s", (eid,))
     db.execute("delete from goals where eid = %s", (eid,))
     db.execute("delete from match_results where eid = %s", (eid,))
+    db.execute("delete from lineups where eid = %s", (eid,))
+    db.execute("delete from photos where eid = %s", (eid,))
     db.execute("delete from events where eid = %s", (eid,))
     flash("予定を削除しました。", "success")
     return redirect(url_for("events"))
@@ -574,7 +635,13 @@ def result_edit(eid):
         flash("試合結果を保存しました。", "success")
         return redirect(url_for("event_detail", eid=eid))
 
-    members = db.query("select uid, uname, number from users order by coalesce(number, 999), uname")
+    members = db.query("""
+        select u.uid, u.uname, u.number, u.position, a.status, l.role
+        from users u
+        left join attendance a on a.uid = u.uid and a.eid = %s
+        left join lineups l on l.uid = u.uid and l.eid = %s
+        order by case when a.status = 'yes' then 0 else 1 end, coalesce(u.number, 999), u.uname
+    """, (eid, eid))
     return render_template("result_form.html", title="試合結果の入力", ev=ev,
                            result=_match_result(eid), goals=_goals(eid), members=members)
 
@@ -725,21 +792,284 @@ def stats():
         order by n desc, u.uname
     """, (today, *params)))
 
+    # 出場（先発＋控え）
+    apps = _ranked(db.query(f"""
+        select u.uid, u.uname, u.number, count(*) as n
+        from lineups l
+        join events e on e.eid = l.eid
+        join users u on u.uid = l.uid
+        where 1 = 1 {scope}
+        group by u.uid, u.uname, u.number
+        order by n desc, u.uname
+    """, tuple(params)))
+
     # ---- チーム成績 ----
     _, team = _match_list(season=season, competition=competition)
 
     # ---- 自分の成績 ----
     uid = g.user["uid"]
     mine = {}
-    for key, rows in (("goals", goals), ("assists", assists), ("mvps", mvps), ("attendance", attendance)):
+    for key, rows in (("goals", goals), ("assists", assists), ("mvps", mvps), ("attendance", attendance), ("apps", apps)):
         mine[key] = next((r["n"] for r in rows if r["uid"] == uid), 0)
     mine["rate"] = round(100 * mine["attendance"] / held) if held else None
 
     return render_template("stats.html", title="スタッツ",
                            seasons=seasons, season=season,
                            competitions=competitions, competition=competition,
-                           goals=goals, assists=assists, mvps=mvps, attendance=attendance,
+                           goals=goals, assists=assists, mvps=mvps, attendance=attendance, apps=apps,
                            held=held, team=team, mine=mine)
+
+
+# =========================================================
+# 投稿（お知らせ）・コメント
+# =========================================================
+
+POST_SQL = """
+select p.*, u.uname as author,
+  (select count(*) from comments c where c.pid = p.pid) as comment_count
+from posts p
+left join users u on u.uid = p.uid
+"""
+
+
+def _can_delete(owner_uid):
+    """自分のもの、または管理者なら消せる"""
+    return g.user["role"] == "admin" or owner_uid == g.user["uid"]
+
+
+@app.route("/posts")
+@login_required
+def posts():
+    rows = db.query(POST_SQL + " order by p.pinned desc, p.created_at desc")
+    return render_template("posts.html", title="投稿", posts=rows)
+
+
+@app.route("/posts/new", methods=["GET", "POST"])
+@login_required
+def post_new():
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        body = request.form.get("body", "").strip()
+        if not body:
+            flash("本文を入力してください。", "danger")
+            return render_template("post_form.html", title="投稿する", post={"title": title, "body": body})
+        db.execute("insert into posts (uid, title, body, created_at) values (%s, %s, %s, %s)",
+                   (g.user["uid"], title, body, now_str()))
+        flash("投稿しました。", "success")
+        return redirect(url_for("posts"))
+    return render_template("post_form.html", title="投稿する", post=None)
+
+
+@app.route("/posts/<int:pid>")
+@login_required
+def post_detail(pid):
+    post = db.query(POST_SQL + " where p.pid = %s", (pid,), one=True)
+    if post is None:
+        abort(404)
+    comments = db.query("""
+        select c.*, u.uname as author
+        from comments c
+        left join users u on u.uid = c.uid
+        where c.pid = %s
+        order by c.created_at
+    """, (pid,))
+    return render_template("post_detail.html", title=post["title"] or "投稿", post=post, comments=comments)
+
+
+@app.route("/posts/<int:pid>/comment", methods=["POST"])
+@login_required
+def comment_add(pid):
+    if db.query("select pid from posts where pid = %s", (pid,), one=True) is None:
+        abort(404)
+    body = request.form.get("body", "").strip()
+    if not body:
+        flash("コメントを入力してください。", "danger")
+    else:
+        db.execute("insert into comments (pid, uid, body, created_at) values (%s, %s, %s, %s)",
+                   (pid, g.user["uid"], body, now_str()))
+        flash("コメントしました。", "success")
+    return redirect(url_for("post_detail", pid=pid))
+
+
+@app.route("/comments/<int:cid>/delete", methods=["POST"])
+@login_required
+def comment_delete(cid):
+    c = db.query("select * from comments where cid = %s", (cid,), one=True)
+    if c is None:
+        abort(404)
+    if not _can_delete(c["uid"]):
+        flash("自分のコメントだけ削除できます。", "warning")
+    else:
+        db.execute("delete from comments where cid = %s", (cid,))
+        flash("コメントを削除しました。", "success")
+    return redirect(url_for("post_detail", pid=c["pid"]))
+
+
+@app.route("/posts/<int:pid>/delete", methods=["POST"])
+@login_required
+def post_delete(pid):
+    post = db.query("select * from posts where pid = %s", (pid,), one=True)
+    if post is None:
+        abort(404)
+    if not _can_delete(post["uid"]):
+        flash("自分の投稿だけ削除できます。", "warning")
+        return redirect(url_for("post_detail", pid=pid))
+    db.execute("delete from comments where pid = %s", (pid,))
+    db.execute("delete from posts where pid = %s", (pid,))
+    flash("投稿を削除しました。", "success")
+    return redirect(url_for("posts"))
+
+
+@app.route("/posts/<int:pid>/pin", methods=["POST"])
+@admin_required
+def post_pin(pid):
+    """上部に固定 ⇔ 解除"""
+    post = db.query("select pinned from posts where pid = %s", (pid,), one=True)
+    if post is None:
+        abort(404)
+    db.execute("update posts set pinned = %s where pid = %s", (0 if post["pinned"] else 1, pid))
+    flash("固定を解除しました。" if post["pinned"] else "投稿を上部に固定しました。", "success")
+    return redirect(url_for("post_detail", pid=pid))
+
+
+# =========================================================
+# 出場メンバー（試合ごと）
+# =========================================================
+
+def _lineup(eid):
+    """先発 / 控え のメンバー一覧"""
+    rows = db.query("""
+        select l.role, u.uid, u.uname, u.number, u.position
+        from lineups l
+        join users u on u.uid = l.uid
+        where l.eid = %s
+        order by case l.role when 'starter' then 0 else 1 end, coalesce(u.number, 999), u.uname
+    """, (eid,))
+    return {"starter": [r for r in rows if r["role"] == "starter"],
+            "sub": [r for r in rows if r["role"] == "sub"]}
+
+
+@app.route("/events/<int:eid>/lineup", methods=["POST"])
+@admin_required
+def lineup_save(eid):
+    """結果入力画面のフォームから、全員分の 先発/控え/なし を保存する"""
+    if db.query("select eid from events where eid = %s and etype = 'match'", (eid,), one=True) is None:
+        abort(404)
+    db.execute("delete from lineups where eid = %s", (eid,))
+    count = 0
+    for key, value in request.form.items():
+        if key.startswith("role_") and value in LINEUP_ROLES:
+            uid = _int_or(key[5:])
+            if uid:
+                db.execute("insert into lineups (eid, uid, role) values (%s, %s, %s)", (eid, uid, value))
+                count += 1
+    flash(f"出場メンバーを保存しました（{count}人）。", "success")
+    return redirect(url_for("result_edit", eid=eid) + "#lineup")
+
+
+# =========================================================
+# 写真（予定ごと）・アルバム
+# =========================================================
+
+UPLOAD_DIR = os.path.join(config.BASE_DIR, "static", "uploads")
+
+
+def _photos(eid):
+    return db.query("""
+        select p.*, u.uname as uploader
+        from photos p
+        left join users u on u.uid = p.uid
+        where p.eid = %s
+        order by p.created_at desc, p.phid desc
+    """, (eid,))
+
+
+@app.route("/events/<int:eid>/photos", methods=["POST"])
+@login_required
+def photo_upload(eid):
+    if db.query("select eid from events where eid = %s", (eid,), one=True) is None:
+        abort(404)
+    files = [f for f in request.files.getlist("photos") if f and f.filename]
+    if not files:
+        flash("写真を選んでください。", "danger")
+        return redirect(url_for("event_detail", eid=eid))
+
+    folder = os.path.join(UPLOAD_DIR, str(eid))
+    try:
+        os.makedirs(folder, exist_ok=True)
+    except OSError:
+        flash("サーバに保存用フォルダを作れませんでした。", "danger")
+        return redirect(url_for("event_detail", eid=eid))
+
+    saved = 0
+    caption = request.form.get("caption", "").strip()
+    for f in files:
+        ext = secure_filename(f.filename).rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+        if ext not in PHOTO_EXTS:
+            continue
+        name = f"{secrets.token_hex(8)}.{ext}"      # ファイル名は推測できないランダムな文字列に
+        path = os.path.join(folder, name)
+        f.save(path)
+        _shrink_image(path)                           # 大きい写真は縮小（Pillow があれば）
+        db.execute("insert into photos (eid, uid, filename, caption, created_at) values (%s, %s, %s, %s, %s)",
+                   (eid, g.user["uid"], name, caption, now_str()))
+        saved += 1
+
+    flash(f"{saved}枚の写真を追加しました。" if saved else "対応していない形式です（jpg / png / gif / webp）。",
+          "success" if saved else "danger")
+    return redirect(url_for("event_detail", eid=eid) + "#photos")
+
+
+def _shrink_image(path, max_px=1600):
+    """長辺が max_px より大きい写真は縮小して保存し直す。Pillow が無ければ何もしない"""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return
+    try:
+        with Image.open(path) as im:
+            im = ImageOps.exif_transpose(im)          # スマホ写真の向きを直す
+            if max(im.size) > max_px:
+                im.thumbnail((max_px, max_px))
+            im.save(path)
+    except Exception:
+        pass
+
+
+@app.route("/photos/<int:phid>/delete", methods=["POST"])
+@login_required
+def photo_delete(phid):
+    ph = db.query("select * from photos where phid = %s", (phid,), one=True)
+    if ph is None:
+        abort(404)
+    if not _can_delete(ph["uid"]):
+        flash("自分が追加した写真だけ削除できます。", "warning")
+        return redirect(url_for("event_detail", eid=ph["eid"]))
+    db.execute("delete from photos where phid = %s", (phid,))
+    try:
+        os.remove(os.path.join(UPLOAD_DIR, str(ph["eid"]), ph["filename"]))
+    except OSError:
+        pass
+    flash("写真を削除しました。", "success")
+    return redirect(url_for("event_detail", eid=ph["eid"]) + "#photos")
+
+
+@app.route("/album")
+@login_required
+def album():
+    """全予定の写真を、予定ごとにまとめて新しい順に"""
+    rows = db.query("""
+        select p.phid, p.eid, p.filename, p.caption, e.title, e.event_date, e.opponent
+        from photos p
+        join events e on e.eid = p.eid
+        order by e.event_date desc, p.created_at desc
+    """)
+    groups = []                                   # [(予定, [写真...]), ...] 日付順
+    for r in rows:
+        if not groups or groups[-1][0]["eid"] != r["eid"]:
+            groups.append((r, []))
+        groups[-1][1].append(r)
+    return render_template("album.html", title="アルバム", groups=groups, total=len(rows))
 
 
 # =========================================================
@@ -787,8 +1117,12 @@ def _player_stats(uid, season):
     matches_attended = count(f"""select count(*) as c from attendance a join events e on e.eid = a.eid
                                  where a.uid = %s and a.status = 'yes' and e.etype = 'match'
                                    and e.cancelled = 0 and e.event_date <= %s {scope}""", (uid, today))
+    apps = count(f"""select count(*) as c from lineups l join events e on e.eid = l.eid
+                     where l.uid = %s {scope}""", (uid,))
+    starts = count(f"""select count(*) as c from lineups l join events e on e.eid = l.eid
+                       where l.uid = %s and l.role = 'starter' {scope}""", (uid,))
     return {
-        "goals": goals, "assists": assists, "mvps": mvps,
+        "goals": goals, "assists": assists, "mvps": mvps, "apps": apps, "starts": starts,
         "attended": attended, "held": held,
         "rate": round(100 * attended / held) if held else None,
         "matches_attended": matches_attended, "matches_held": matches_held,

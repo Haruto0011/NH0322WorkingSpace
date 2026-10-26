@@ -38,6 +38,32 @@
 {% endif %}
 <a href="{{ url_for('events') }}" class="btn btn-outline-team btn-sm w-100 mb-4">すべての予定を見る</a>
 
+{# ---------- 投稿（最新3件） ---------- #}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h6 text-muted mb-0">投稿</h2>
+  <a href="{{ url_for('post_new') }}" class="btn btn-outline-team btn-sm">＋ 投稿する</a>
+</div>
+<div class="card shadow-sm mb-4">
+  {% if posts %}
+  <div class="list-group list-group-flush">
+    {% for p in posts %}
+    <a href="{{ url_for('post_detail', pid=p.pid) }}" class="list-group-item list-group-item-action py-2">
+      <div class="d-flex justify-content-between gap-2">
+        <div class="min-w-0">
+          {% if p.pinned %}📌 {% endif %}{% if p.title %}<strong>{{ p.title }}</strong> {% endif %}
+          <span class="post-excerpt text-body d-block">{{ p.body }}</span>
+        </div>
+        <small class="text-muted text-nowrap">{{ p.author }}{% if p.comment_count %} 💬{{ p.comment_count }}{% endif %}</small>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  <a href="{{ url_for('posts') }}" class="card-footer text-center small text-decoration-none">すべての投稿を見る &rsaquo;</a>
+  {% else %}
+  <div class="card-body text-muted small">投稿がありません</div>
+  {% endif %}
+</div>
+
 <div class="row g-3">
   {# ---------- 最新の試合結果 ---------- #}
   <div class="col-12 col-md-6">
@@ -98,6 +124,7 @@
 
 <div class="text-center small text-muted mt-4">
   メンバー {{ member_count }}人 ・ <a href="{{ url_for('members') }}" class="text-decoration-none">メンバー一覧</a>
+  ・ <a href="{{ url_for('album') }}" class="text-decoration-none">📷 アルバム</a>
 </div>
 
 {% endblock %}

@@ -196,8 +196,90 @@ for eid, etype, d in events:
                       "values (%s, %s, %s, %s, %s, %s, %s)"),
                     (eid, "opp", None, None, half, rng.randint(1, 45), ""))
 
+# ---------------------------------------------------------------
+# 出場メンバー（終わった試合：出席者から先発11人＋控え）
+# ---------------------------------------------------------------
+for eid, etype, d in events:
+    if etype != "match" or d > today:
+        continue
+    cur.execute(q("select uid from attendance where eid = %s and status = 'yes' and uid <> %s"), (eid, admin_uid))
+    present = [r["uid"] for r in cur.fetchall()]
+    # GK を1人は入れる
+    gks = [u for u in present if pos_of[u] == "GK"]
+    others = [u for u in present if pos_of[u] != "GK"]
+    rng.shuffle(others)
+    starters = (gks[:1] + others)[:11]
+    subs = [u for u in present if u not in starters][:5]
+    for u in starters:
+        cur.execute(q("insert into lineups (eid, uid, role) values (%s, %s, 'starter')"), (eid, u))
+    for u in subs:
+        cur.execute(q("insert into lineups (eid, uid, role) values (%s, %s, 'sub')"), (eid, u))
+
+# ---------------------------------------------------------------
+# 投稿とコメント
+# ---------------------------------------------------------------
+from datetime import datetime
+def ts(days_ago, hour=20):
+    return (datetime.combine(today, datetime.min.time()) - timedelta(days=days_ago)).replace(hour=hour).strftime("%Y-%m-%d %H:%M:%S")
+
+posts = [
+    # (投稿者, タイトル, 本文, 固定, 何日前, [(コメント者, 本文), ...])
+    (admin_uid, "リーグ戦 残り2試合！", "昇格争いは最終節までもつれそうです。\n練習の出席率を上げて、ベストメンバーで臨みましょう。\n車を出せる人は早めに教えてください。", 1, 3,
+        [(uids[5], "日曜は車出せます！3人乗れます"), (uids[16], "得点王、狙います"), (uids[1], "了解です。GK練もう少しやりたいです")]),
+    (uids[5], "ユニフォーム回収のお願い", "先週の試合で使った白ユニフォーム、まだ返してない人は次の練習で持ってきてください。洗濯済みでお願いします。", 0, 6,
+        [(uids[10], "すみません、次回持っていきます")]),
+    (uids[12], "新しいボール買いました", "練習用のボールを3つ補充しました。空気入れも倉庫に置いてあります。", 0, 10, []),
+    (admin_uid, "納会の日程", "シーズン終わりの納会を企画中です。希望日があればコメントで教えてください。", 0, 14,
+        [(uids[8], "12月第2週がいいです"), (uids[18], "平日夜より週末希望です"), (uids[3], "どっちでも参加します")]),
+]
+for uid, title, body, pinned, days_ago, comments_ in posts:
+    cur.execute(q("insert into posts (uid, title, body, pinned, created_at) values (%s, %s, %s, %s, %s)"),
+                (uid, title, body, pinned, ts(days_ago)))
+    cur.execute(q("select max(pid) as m from posts"))
+    pid = cur.fetchone()["m"]
+    for i, (cuid, cbody) in enumerate(comments_):
+        cur.execute(q("insert into comments (pid, uid, body, created_at) values (%s, %s, %s, %s)"),
+                    (pid, cuid, cbody, ts(days_ago, hour=21 + i)))
+
+# ---------------------------------------------------------------
+# 写真（直近2試合に3枚ずつ）
+#   static/uploads/<eid>/sample1〜3.jpg があればそれを登録する。
+#   無ければ Pillow でサンプル画像を作る（Pillow も無ければ写真なし）
+# ---------------------------------------------------------------
+import os
+photo_events = [e for e in events if e[1] == "match" and e[2] <= today][-2:]   # 直近2試合
+try:
+    from PIL import Image, ImageDraw
+except ImportError:
+    Image = None
+palette = [((200, 16, 46), (255, 150, 150)), ((20, 90, 160), (150, 200, 255)), ((30, 130, 70), (160, 230, 180))]
+n = 0
+for eid, _, d in photo_events:
+    folder = os.path.join(config.BASE_DIR, "static", "uploads", str(eid))
+    for k in range(3):
+        name = f"sample{k + 1}.jpg"
+        path = os.path.join(folder, name)
+        if not os.path.exists(path) and Image is not None:
+            os.makedirs(folder, exist_ok=True)
+            c1, c2 = palette[n % len(palette)]
+            img = Image.new("RGB", (800, 600))
+            px = img.load()
+            for y in range(600):                      # 上下のグラデーション
+                t = y / 599
+                col = tuple(int(c1[i] * (1 - t) + c2[i] * t) for i in range(3))
+                for x in range(800):
+                    px[x, y] = col
+            dr = ImageDraw.Draw(img)
+            dr.ellipse([330, 230, 470, 370], fill="#fff", outline="#111", width=6)
+            dr.text((20, 560), f"sample photo {n + 1}", fill="#fff")
+            img.save(path, quality=85)
+        if os.path.exists(path):
+            cur.execute(q("insert into photos (eid, uid, filename, caption, created_at) values (%s, %s, %s, %s, %s)"),
+                        (eid, uids[(k + 3) % len(uids)], name, rng.choice(["", "試合前の集合写真", "ゴールシーン", ""]), ts((today - d).days, 18)))
+        n += 1
+
 conn.commit()
 cur.close()
 conn.close()
-print(f"OK: お試しデータを入れました（メンバー{len(members)}人・予定{len(events)}件）。")
+print(f"OK: お試しデータを入れました（メンバー{len(members)}人・予定{len(events)}件・投稿{len(posts)}件）。")
 print("    admin@example.com / pass1234 でログインできます（選手は tanaka@example.com など）。")

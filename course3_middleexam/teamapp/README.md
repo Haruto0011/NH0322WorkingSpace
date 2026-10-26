@@ -41,7 +41,10 @@ teamapp/
 │   ├── event_detail.html 予定詳細・出欠回答・試合結果
 │   ├── event_form.html  予定の追加/編集（管理者）
 │   ├── result_form.html 試合結果の入力（管理者）
+│   ├── events_calendar.html 月カレンダー
 │   ├── scores.html      スコア一覧
+│   ├── posts.html / post_form.html / post_detail.html   投稿・コメント
+│   ├── album.html       アルバム（写真一覧）
 │   ├── members.html     メンバー一覧
 │   ├── profile.html     プロフィール編集
 │   ├── member_detail.html 選手ページ（プロフィール・個人成績）
@@ -52,7 +55,8 @@ teamapp/
 └── static/
     ├── css/bootstrap.min.css, js/bootstrap.bundle.min.js   Bootstrap 5.3.3（同梱）
     ├── css/style.css    サイト独自のスタイル
-    └── icons/           favicon・ホーム画面用アイコン（make_icons.py で生成）
+    ├── icons/           favicon・ホーム画面用アイコン（make_icons.py で生成）
+    └── uploads/         アップロードされた写真（予定IDごとのフォルダ。git には入れない）
 ```
 
 ## デモモード（課題提出用）
@@ -72,3 +76,5 @@ python make_admin.py 登録したメールアドレス
 2. サーバ上で `python init_db.py`（テーブル作成。`psycopg2-binary` のインストールが必要）
 3. Cyberduck で `teamapp/` フォルダごとアップロード（`.venv` と `team.db` は不要）
 4. 講義資料どおり、`flask.wsgi` のパスを石橋先生へ申請
+5. サーバ上で `python seed.py`（デモモードが使う `admin@example.com` を作る）
+6. 写真を使うなら `static/uploads/` をWebサーバから書き込めるようにする（`chmod 777 static/uploads` など）

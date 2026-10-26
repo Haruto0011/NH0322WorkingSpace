@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 team.db
 .DS_Store
+static/uploads/

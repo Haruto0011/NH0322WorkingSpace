@@ -130,6 +130,31 @@
 </div>
 {% endif %}
 
+{# ---------- 出場メンバー（試合で、登録があるときだけ） ---------- #}
+{% if lineup and (lineup.starter or lineup.sub) %}
+<div class="card shadow-sm mb-2">
+  <div class="card-body">
+    <h2 class="h6 d-flex justify-content-between align-items-center">
+      出場メンバー
+      {% if g.user.role == 'admin' %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('result_edit', eid=ev.eid) }}#lineup">編集</a>{% endif %}
+    </h2>
+    {% for role, label in LINEUP_ROLES.items() %}
+    {% if lineup[role] %}
+    <div class="small text-muted mt-2 mb-1">{{ label }} ({{ lineup[role]|length }})</div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for m in lineup[role] %}
+      <a href="{{ url_for('member_detail', uid=m.uid) }}" class="member-chip text-decoration-none text-body">
+        {% if m.number %}<span class="chip-number">{{ m.number }}</span>{% endif %}{{ m.uname }}
+        {% if m.position %}<small class="text-muted">{{ m.position }}</small>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {# ---------- 自分の出欠（中止のときは出さない） ---------- #}
 {% if not ev.cancelled %}
 <div class="card shadow-sm mb-2">
@@ -178,6 +203,39 @@
       <div class="tab-pane fade" id="tab-no" role="tabpanel">{{ member_chips(groups.no, "欠席の回答はありません。") }}</div>
       <div class="tab-pane fade" id="tab-none" role="tabpanel">{{ member_chips(groups.none, "全員回答済みです 🎉") }}</div>
     </div>
+  </div>
+</div>
+
+{# ---------- 写真 ---------- #}
+<div class="card shadow-sm mt-2" id="photos">
+  <div class="card-body">
+    <h2 class="h6 d-flex justify-content-between align-items-baseline">
+      <span>写真 <small class="text-muted">({{ photos|length }}枚)</small></span>
+      <a href="{{ url_for('album') }}" class="small text-decoration-none">アルバム &rsaquo;</a>
+    </h2>
+    {% if photos %}
+    <div class="photo-grid mb-3">
+      {% for p in photos %}
+      <div class="photo-thumb">
+        <a href="{{ url_for('static', filename='uploads/' ~ p.eid ~ '/' ~ p.filename) }}" target="_blank" rel="noopener">
+          <img src="{{ url_for('static', filename='uploads/' ~ p.eid ~ '/' ~ p.filename) }}" alt="{{ p.caption or ev.title }}" loading="lazy">
+        </a>
+        {% if g.user.role == 'admin' or p.uid == g.user.uid %}
+        <form method="post" action="{{ url_for('photo_delete', phid=p.phid) }}" class="photo-del" onsubmit="return confirm('この写真を削除しますか？');">
+          <button class="btn btn-sm btn-danger" aria-label="削除">×</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <form method="post" action="{{ url_for('photo_upload', eid=ev.eid) }}" enctype="multipart/form-data" class="d-flex flex-column gap-2">
+      <input type="file" class="form-control form-control-sm" name="photos" accept="image/*" multiple required>
+      <div class="input-group input-group-sm">
+        <input type="text" class="form-control" name="caption" maxlength="100" placeholder="ひとこと（任意）">
+        <button class="btn btn-outline-team">写真を追加</button>
+      </div>
+    </form>
   </div>
 </div>
 

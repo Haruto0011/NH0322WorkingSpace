@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1 class="h5 mb-3">アルバム <small class="text-muted">({{ total }}枚)</small></h1>
+
+{% if groups %}
+{% for ev, photos in groups %}
+<div class="mb-4">
+  <h2 class="h6 d-flex justify-content-between align-items-baseline">
+    <a href="{{ url_for('event_detail', eid=ev.eid) }}" class="text-decoration-none text-body">
+      <small class="text-muted">{{ ev.event_date|jdate }}</small> {{ ev.title }}
+    </a>
+    <small class="text-muted">{{ photos|length }}枚</small>
+  </h2>
+  <div class="photo-grid">
+    {% for p in photos %}
+    <a href="{{ url_for('static', filename='uploads/' ~ p.eid ~ '/' ~ p.filename) }}" target="_blank" rel="noopener" class="photo-thumb">
+      <img src="{{ url_for('static', filename='uploads/' ~ p.eid ~ '/' ~ p.filename) }}" alt="{{ p.caption or ev.title }}" loading="lazy">
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card"><div class="card-body text-muted">
+  まだ写真がありません。各予定のページの「写真」から追加できます。
+</div></div>
+{% endif %}
+
+{% endblock %}

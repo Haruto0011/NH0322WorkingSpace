@@ -128,6 +128,36 @@
   </div>
 </div>
 
+{# ---------- 出場メンバー ---------- #}
+<div class="card shadow-sm mb-3" id="lineup">
+  <div class="card-body">
+    <h2 class="h6">出場メンバー</h2>
+    <p class="small text-muted mb-2">出席と回答した人が上に並びます。先発 / 控え を選んで保存してください。</p>
+    <form method="post" action="{{ url_for('lineup_save', eid=ev.eid) }}">
+      <div class="lineup-list">
+        {% for m in members %}
+        <div class="lineup-row {% if m.status != 'yes' %}text-muted{% endif %}">
+          <div class="name text-truncate">
+            {% if m.number %}<span class="chip-number">{{ m.number }}</span>{% endif %}{{ m.uname }}
+            {% if m.position %}<small>{{ m.position }}</small>{% endif %}
+            {% if m.status != 'yes' %}<small class="text-muted">（{{ '欠席' if m.status == 'no' else '未回答' }}）</small>{% endif %}
+          </div>
+          <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="role_{{ m.uid }}" id="r-{{ m.uid }}-none" value="" {% if not m.role %}checked{% endif %}>
+            <label class="btn btn-outline-secondary" for="r-{{ m.uid }}-none">–</label>
+            <input type="radio" class="btn-check" name="role_{{ m.uid }}" id="r-{{ m.uid }}-starter" value="starter" {% if m.role == 'starter' %}checked{% endif %}>
+            <label class="btn btn-outline-team" for="r-{{ m.uid }}-starter">先発</label>
+            <input type="radio" class="btn-check" name="role_{{ m.uid }}" id="r-{{ m.uid }}-sub" value="sub" {% if m.role == 'sub' %}checked{% endif %}>
+            <label class="btn btn-outline-secondary" for="r-{{ m.uid }}-sub">控え</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <button class="btn btn-team w-100 mt-3">出場メンバーを保存</button>
+    </form>
+  </div>
+</div>
+
 <script>
   // 「相手の得点」を選んだら得点者・アシストの欄を隠す
   document.querySelectorAll('input[name="side"]').forEach(function (radio) {

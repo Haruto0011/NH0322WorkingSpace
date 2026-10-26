@@ -69,3 +69,38 @@ create table if not exists goals (
   minute     integer,                       -- その半分の中での分（任意）
   note       text                           -- 'PK' 'オウンゴール' など
 );
+
+-- 投稿（お知らせ）とコメント
+create table if not exists posts (
+  pid        serial primary key,
+  uid        integer references users(uid),   -- 投稿者
+  title      text,
+  body       text not null,
+  pinned     integer not null default 0,      -- 1 なら上部に固定（管理者）
+  created_at timestamp not null
+);
+create table if not exists comments (
+  cid        serial primary key,
+  pid        integer not null references posts(pid),
+  uid        integer references users(uid),
+  body       text not null,
+  created_at timestamp not null
+);
+
+-- 出場メンバー（試合ごと）
+create table if not exists lineups (
+  eid        integer not null references events(eid),
+  uid        integer not null references users(uid),
+  role       text not null,                   -- 'starter'(先発) / 'sub'(控え)
+  primary key (eid, uid)
+);
+
+-- 写真（予定ごと）。ファイルは static/uploads/<eid>/ に保存
+create table if not exists photos (
+  phid       serial primary key,
+  eid        integer not null references events(eid),
+  uid        integer references users(uid),   -- アップロードした人
+  filename   text not null,
+  caption    text,
+  created_at timestamp not null
+);
