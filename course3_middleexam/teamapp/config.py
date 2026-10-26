@@ -31,9 +31,11 @@ SECRET_KEY = "6c424ac5d16d778bc1b14afa2c02b1c3"   # session signing key; change 
 FORCE_HTTPS = False                              # redirect http -> https (enable in production)
 
 # --- Database ----------------------------------------------------------------
-DB_KIND = "sqlite"                               # "sqlite" | "postgres"
-SQLITE_PATH = os.path.join(BASE_DIR, "team.db")
-POSTGRES_DSN = "host=localhost dbname=s0000001 user=s0000001 password=XXXXXX"
+DB_KIND = "postgres"
+POSTGRES_DSN = "host=localhost dbname=s2422113 user=s2422113 password=KXuIIHF5"
+SECRET_KEY = "hjfiow4809jcbbuudbndkncju59380809ujjchjfimwknfjjrohfirjfi3hihe5h9h5h9hu095htu835h"
+FORCE_HTTPS = False      # まずは False のまま（URLが http:// なので）
+DEMO_MODE = True
 
 # --- Development server ------------------------------------------------------
 DEV_PORT = 5050   # 5000 is taken by AirPlay Receiver on recent macOS

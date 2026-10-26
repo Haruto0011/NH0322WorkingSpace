@@ -26,3 +26,5 @@ __pycache__/
 
 # gradioの自動生成フォルダ
 .gradio/
+
+config.py
