@@ -14,7 +14,7 @@
   </h2>
   <div class="photo-grid">
     {% for p in photos %}
-    <a href="{{ url_for('static', filename='uploads/' ~ p.eid ~ '/' ~ p.filename) }}" target="_blank" rel="noopener" class="photo-thumb">
+    <a href="{{ url_for('static', filename='uploads/' ~ p.eid ~ '/' ~ p.filename) }}" target="_blank" rel="noopener" class="photo-thumb" title="{{ p.caption }}">
       <img src="{{ url_for('static', filename='uploads/' ~ p.eid ~ '/' ~ p.filename) }}" alt="{{ p.caption or ev.title }}" loading="lazy">
     </a>
     {% endfor %}

@@ -47,6 +47,7 @@ STATUSES = {"yes": "出席", "no": "欠席"}  # no row = unanswered
 HALVES = {1: "前半", 2: "後半"}
 LINEUP_ROLES = {"starter": "先発", "sub": "控え"}
 OUTCOMES = {"win": "勝ち", "draw": "引き分け", "loss": "負け"}
+MEMBER_STATUS = {"active": "現役", "ob": "OB"}
 PHOTO_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
 WEEKDAYS = "月火水木金土日"
 
@@ -85,6 +86,7 @@ def inject_globals():
         "HALVES": HALVES,
         "OUTCOMES": OUTCOMES,
         "LINEUP_ROLES": LINEUP_ROLES,
+        "MEMBER_STATUS": MEMBER_STATUS,
     }
 
 
@@ -277,7 +279,7 @@ def index():
 
     latest_list, _ = _match_list(limit=1)
     _, summary = _match_list(season=config.CURRENT_SEASON)
-    member_count = db.query("select count(*) as c from users", one=True)["c"]
+    member_count = db.query("select count(*) as c from users where status = 'active'", one=True)["c"]
     latest_posts = db.query(POST_SQL + " order by p.pinned desc, p.created_at desc limit 3")
 
     return render_template("index.html", title="ホーム", events=events, pending=pending,
@@ -345,6 +347,7 @@ def event_detail(eid):
         select u.uid, u.uname, u.number, u.position, a.status, a.comment
         from users u
         left join attendance a on a.uid = u.uid and a.eid = %s
+        where u.status = 'active'
         order by coalesce(u.number, 999), u.uname
     """, (eid,))
     groups = {"yes": [], "no": [], "none": []}
@@ -624,6 +627,7 @@ def result_edit(eid):
         from users u
         left join attendance a on a.uid = u.uid and a.eid = %s
         left join lineups l on l.uid = u.uid and l.eid = %s
+        where u.status = 'active'
         order by case when a.status = 'yes' then 0 else 1 end, coalesce(u.number, 999), u.uname
     """, (eid, eid))
     return render_template("result_form.html", title="試合結果の入力", ev=ev,
@@ -885,7 +889,7 @@ def post_pin(pid):
 
 def _lineup(eid):
     rows = db.query("""
-        select l.role, u.uid, u.uname, u.number, u.position, u.captain
+        select l.role, u.uid, u.uname, u.number, u.position, u.captain, u.vice_captain
         from lineups l
         join users u on u.uid = l.uid
         where l.eid = %s
@@ -1022,15 +1026,19 @@ def album():
 @login_required
 def members():
     rows = db.query("""
-        select uid, uname, number, position, role, captain
+        select uid, uname, number, position, role, captain, vice_captain, status
         from users
-        order by coalesce(number, 999), uname
+        order by case when captain = 1 then 0 when vice_captain = 1 then 1 else 2 end,
+                 coalesce(number, 999), uname
     """)
+    active = [r for r in rows if r["status"] != "ob"]
+    alumni = [r for r in rows if r["status"] == "ob"]
     groups = {p: [] for p in POSITIONS}
     groups[None] = []
-    for r in rows:
+    for r in active:
         groups[r["position"] if r["position"] in POSITIONS else None].append(r)
-    return render_template("members.html", title="メンバー", groups=groups, total=len(rows))
+    return render_template("members.html", title="メンバー", groups=groups,
+                           total=len(active), alumni=alumni)
 
 
 def _player_stats(uid, season):
@@ -1126,7 +1134,9 @@ def _save_profile(uid, allow_role=False, is_admin=False):
     if allow_role and f.get("role") in ("admin", "member"):
         db.execute("update users set role = %s where uid = %s", (f.get("role"), uid))
     if is_admin:
-        db.execute("update users set captain = %s where uid = %s", (1 if f.get("captain") == "on" else 0, uid))
+        status = f.get("status") if f.get("status") in MEMBER_STATUS else "active"
+        db.execute("update users set captain = %s, vice_captain = %s, status = %s where uid = %s",
+                   (1 if f.get("captain") == "on" else 0, 1 if f.get("vice_captain") == "on" else 0, status, uid))
     return None
 
 

@@ -1,29 +1,75 @@
 {% extends "layout.html" %}
+{% from "_macros.html" import rank_marks %}
 {% block content %}
 
-<h1 class="h5 mb-3">メンバー <small class="text-muted">({{ total }}人)</small></h1>
+{# Active / alumni switch (client-side, no reload) #}
+<div class="member-switch mb-3" role="tablist">
+  <button type="button" class="active" data-target="panel-active" role="tab" aria-selected="true">
+    メンバー <small>({{ total }}人)</small>
+  </button>
+  <button type="button" data-target="panel-ob" role="tab" aria-selected="false">
+    OBメンバー <small>({{ alumni|length }}人)</small>
+  </button>
+</div>
 
-{# Grouped by position; rows link to the member page. #}
-{% for pos in POSITIONS + [None] %}
-{% set list = groups[pos] %}
-{% if list %}
-<h2 class="h6 text-muted mb-1 mt-3">{{ pos or 'ポジション未設定' }} <small>({{ list|length }})</small></h2>
-<div class="list-group shadow-sm">
-  {% for m in list %}
-  <a href="{{ url_for('member_detail', uid=m.uid) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-    <div>
-      <span class="number-badge">{{ m.number if m.number else '–' }}</span>
-      <span class="ms-2">{{ m.uname }}</span>
-      {% if m.captain %}<span class="captain-mark" title="キャプテン">C</span>{% endif %}
-    </div>
-    <div>
-      {% if m.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}
-      <span class="text-muted">&rsaquo;</span>
-    </div>
-  </a>
+<div id="panel-active" class="member-panel">
+  {% for pos in POSITIONS + [None] %}
+  {% set list = groups[pos] %}
+  {% if list %}
+  <h2 class="h6 text-muted mb-1 mt-3">{{ pos or 'ポジション未設定' }} <small>({{ list|length }})</small></h2>
+  <div class="list-group shadow-sm">
+    {% for m in list %}
+    <a href="{{ url_for('member_detail', uid=m.uid) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+      <div>
+        <span class="number-badge">{{ m.number if m.number else '–' }}</span>
+        <span class="ms-2">{{ m.uname }}</span>
+        {{ rank_marks(m) }}
+      </div>
+      <div>
+        {% if m.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}
+        <span class="text-muted">&rsaquo;</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endfor %}
 </div>
-{% endif %}
-{% endfor %}
+
+<div id="panel-ob" class="member-panel" hidden>
+  {% if alumni %}
+  <div class="list-group shadow-sm mt-3">
+    {% for m in alumni %}
+    <a href="{{ url_for('member_detail', uid=m.uid) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+      <div>
+        <span class="number-badge ob">{{ m.number if m.number else '–' }}</span>
+        <span class="ms-2">{{ m.uname }}</span>
+        {% if m.position %}<span class="badge bg-light text-dark border ms-1">{{ m.position }}</span>{% endif %}
+      </div>
+      <span class="text-muted">&rsaquo;</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted mt-3">OBメンバーはまだ登録されていません。</p>
+  {% endif %}
+  {% if g.user.role == 'admin' %}
+  <p class="small text-muted mt-2">現役 / OB の切り替えは各メンバーのページの「編集（管理者）」から行えます。</p>
+  {% endif %}
+</div>
+
+<script>
+  document.querySelectorAll('.member-switch button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.member-switch button').forEach(function (b) {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-selected', b === btn);
+      });
+      document.querySelectorAll('.member-panel').forEach(function (p) {
+        p.hidden = p.id !== btn.dataset.target;
+      });
+    });
+  });
+</script>
 
 {% endblock %}

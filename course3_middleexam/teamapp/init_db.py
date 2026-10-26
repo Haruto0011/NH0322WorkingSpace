@@ -24,6 +24,8 @@ MIGRATIONS = [
     ("users.foot", "alter table users add column foot text"),
     ("users.intro", "alter table users add column intro text"),
     ("users.captain", "alter table users add column captain integer not null default 0"),
+    ("users.vice_captain", "alter table users add column vice_captain integer not null default 0"),
+    ("users.status", "alter table users add column status text not null default 'active'"),
 ]
 
 schema_file = "schema_sqlite.sql" if config.DB_KIND == "sqlite" else "schema_postgres.sql"

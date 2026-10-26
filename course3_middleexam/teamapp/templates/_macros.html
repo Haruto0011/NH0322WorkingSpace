@@ -10,6 +10,12 @@
 {% else %}<span class="badge bg-white text-muted border">未回答</span>{% endif %}
 {%- endmacro %}
 
+{# Captain / vice-captain marks #}
+{% macro rank_marks(m, size='') -%}
+{% if m.captain %}<span class="captain-mark {{ size }}" title="キャプテン">C</span>{% endif %}
+{%- if m.vice_captain %}<span class="captain-mark vc {{ size }}" title="副キャプテン">VC</span>{% endif %}
+{%- endmacro %}
+
 {# One row of the event list (home, list, calendar). #}
 {% macro event_row(e) -%}
 <a href="{{ url_for('event_detail', eid=e.eid) }}"

@@ -63,10 +63,12 @@ members = [
     ("清水",   "shimizu",   "member", 18, "FW", 173, 67, "2005-01-20", "右", ""),
     ("森",     "mori",      "member", 19, "FW", 176, 70, "2005-10-10", "両", ""),
 ]
+vice_captains = {"nakamura", "takahashi"}
 for name, key, role, number, pos, h, w, bd, foot, intro in members:
-    cur.execute(q("insert into users (uname, email, pw, role, number, position, height_cm, weight_kg, birthdate, foot, intro, captain) "
-                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"),
-                (name, f"{key}@example.com", pw, role, number, pos, h, w, bd, foot, intro, 1 if key == "tanaka" else 0))
+    cur.execute(q("insert into users (uname, email, pw, role, number, position, height_cm, weight_kg, birthdate, foot, intro, captain, vice_captain) "
+                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"),
+                (name, f"{key}@example.com", pw, role, number, pos, h, w, bd, foot, intro,
+                 1 if key == "tanaka" else 0, 1 if key in vice_captains else 0))
 
 cur.execute(q("select uid, position from users order by uid"))
 rows = cur.fetchall()
@@ -79,6 +81,21 @@ players = uids[1:]
 cur.execute(q("insert into users (uname, email, pw, role) values (%s, %s, %s, 'admin')"),
             (config.OWNER_NAME, config.OWNER_EMAIL.lower(),
              generate_password_hash(config.OWNER_PASSWORD, method="pbkdf2:sha256")))
+
+# Alumni (status 'ob'). Not included in attendance or stats.
+alumni = [
+    # name, email key, number, position, height, weight, birthdate, foot, intro
+    ("大野", "ono",      5,  "DF", 178, 74, "1999-05-21", "右", "2024年卒。初代キャプテン"),
+    ("岡田", "okada",    10, "MF", 172, 66, "1999-11-02", "左", "2024年卒。現在は社会人リーグでプレー中"),
+    ("藤田", "fujita",   9,  "FW", 180, 75, "2000-02-14", "右", "2025年卒。通算得点王"),
+    ("村上", "murakami", 1,  "GK", 185, 80, "2000-08-30", "右", "2025年卒"),
+    ("石井", "ishii",    7,  "MF", 169, 63, "2000-12-09", "右", "2025年卒。OB会幹事"),
+    ("長谷川", "hasegawa", 3, "DF", 176, 72, "2001-03-17", "左", "2026年卒"),
+]
+for name, key, number, pos, h, w, bd, foot, intro in alumni:
+    cur.execute(q("insert into users (uname, email, pw, role, number, position, height_cm, weight_kg, birthdate, foot, intro, status) "
+                  "values (%s, %s, %s, 'member', %s, %s, %s, %s, %s, %s, %s, 'ob')"),
+                (name, f"{key}@example.com", pw, number, pos, h, w, bd, foot, intro))
 
 # Likelihood of scoring / assisting by position.
 goal_weight = {"GK": 0, "DF": 1, "MF": 3, "FW": 6}
@@ -212,7 +229,7 @@ for uid, title, body, pinned, days_ago, replies in posts:
         cur.execute(q("insert into comments (pid, uid, body, created_at) values (%s, %s, %s, %s)"),
                     (pid, cuid, cbody, ts(days_ago, hour=21 + i)))
 
-# --- Sample photos (last two played matches) ---------------------------------
+# --- Sample photos (last five played matches) --------------------------------
 # Uses static/uploads/<eid>/sampleN.jpg if present; otherwise renders placeholders with Pillow.
 try:
     from PIL import Image, ImageDraw
@@ -221,7 +238,8 @@ except ImportError:
 
 palette = [((200, 16, 46), (255, 150, 150)), ((20, 90, 160), (150, 200, 255)), ((30, 130, 70), (160, 230, 180))]
 n = 0
-for eid, _, d in [e for e in events if e[1] == "match" and e[2] <= today][-2:]:
+captions = ["試合前の集合写真", "ゴールシーン", "ハーフタイム", "試合後のミーティング", "応援に来てくれたOBと", "", ""]
+for eid, _, d in [e for e in events if e[1] == "match" and e[2] <= today][-5:]:
     folder = os.path.join(config.BASE_DIR, "static", "uploads", str(eid))
     for k in range(3):
         name = f"sample{k + 1}.jpg"
@@ -243,11 +261,11 @@ for eid, _, d in [e for e in events if e[1] == "match" and e[2] <= today][-2:]:
         if os.path.exists(path):
             cur.execute(q("insert into photos (eid, uid, filename, caption, created_at) values (%s, %s, %s, %s, %s)"),
                         (eid, uids[(k + 3) % len(uids)], name,
-                         rng.choice(["", "試合前の集合写真", "ゴールシーン", ""]), ts((today - d).days, 18)))
+                         rng.choice(captions), ts((today - d).days, 18)))
         n += 1
 
 conn.commit()
 cur.close()
 conn.close()
-print(f"seeded: {len(members) + 1} users, {len(events)} events, {len(posts)} posts")
+print(f"seeded: {len(members) + 1 + len(alumni)} users, {len(events)} events, {len(posts)} posts")
 print(f"login: admin@example.com / pass1234  (owner: {config.OWNER_EMAIL})")

@@ -505,3 +505,36 @@ body {
   line-height: 1.3em;
   font-size: .65rem;
 }
+
+.captain-mark.vc {
+  background: #fff;
+  color: #b58100;
+  border-color: #e0a800;
+  padding: 0 .3em;
+}
+.number-badge.ob {
+  background: #6c757d;
+}
+
+/* ---- Members: active / alumni switch ---- */
+.member-switch {
+  display: flex;
+  border-bottom: 2px solid #dee2e6;
+}
+.member-switch button {
+  flex: 1 1 0;
+  background: none;
+  border: 0;
+  padding: .6rem .25rem;
+  font-weight: 600;
+  color: #6c757d;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+}
+.member-switch button.active {
+  color: var(--team);
+  border-bottom-color: var(--team);
+}
+.member-switch small {
+  font-weight: 400;
+}

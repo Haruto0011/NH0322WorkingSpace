@@ -14,6 +14,8 @@ create table if not exists users (
   foot       text,                            -- preferred foot
   intro      text,
   captain    integer not null default 0,
+  vice_captain integer not null default 0,
+  status     text not null default 'active', -- 'active' | 'ob' (alumni)
   created_at timestamp default current_timestamp
 );
 

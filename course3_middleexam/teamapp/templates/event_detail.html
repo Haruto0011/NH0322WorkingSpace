@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% from "_macros.html" import etype_badge with context %}
+{% from "_macros.html" import etype_badge, rank_marks with context %}
 {% block content %}
 
 {# Member chips for the attendance tabs. #}
@@ -145,7 +145,7 @@
       {% for m in lineup[role] %}
       <a href="{{ url_for('member_detail', uid=m.uid) }}" class="member-chip text-decoration-none text-body">
         {% if m.number %}<span class="chip-number">{{ m.number }}</span>{% endif %}{{ m.uname }}
-        {% if m.captain %}<span class="captain-mark sm">C</span>{% endif %}
+        {{ rank_marks(m, 'sm') }}
         {% if m.position %}<small class="text-muted">{{ m.position }}</small>{% endif %}
       </a>
       {% endfor %}

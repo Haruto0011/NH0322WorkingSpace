@@ -55,10 +55,22 @@
         </div>
         {% if is_admin_edit %}
         <div class="col-12 col-sm-6 mb-3">
-          <label class="form-label d-block">キャプテン</label>
-          <div class="form-check form-switch mt-2">
+          <label class="form-label">在籍</label>
+          <select class="form-select" name="status">
+            {% for key, label in MEMBER_STATUS.items() %}
+            <option value="{{ key }}" {% if u.status == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-sm-6 mb-3">
+          <label class="form-label d-block">役職</label>
+          <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" name="captain" id="captain" {% if u.captain %}checked{% endif %}>
-            <label class="form-check-label" for="captain">キャプテンマーク <span class="captain-mark sm">C</span> を付ける</label>
+            <label class="form-check-label" for="captain">キャプテン <span class="captain-mark sm">C</span></label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="vice_captain" id="vice_captain" {% if u.vice_captain %}checked{% endif %}>
+            <label class="form-check-label" for="vice_captain">副キャプテン <span class="captain-mark vc sm">VC</span></label>
           </div>
         </div>
         {% endif %}
