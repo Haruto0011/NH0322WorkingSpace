@@ -42,7 +42,6 @@
       <li class="nav-item">
         <a class="nav-link d-flex align-items-center gap-1" href="{{ url_for('member_detail', uid=g.user.uid) }}">
           {{ icon('person', 18) }} {{ g.user.uname }}
-          {% if g.demo %}<span class="badge bg-white text-team ms-1">デモ</span>{% endif %}
         </a>
       </li>
       {% if g.demo %}

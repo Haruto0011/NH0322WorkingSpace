@@ -214,9 +214,9 @@ def registing():
 def login():
     if g.user and not g.demo:
         return redirect(url_for("index"))
-    # In demo mode the login button signs in the owner account directly;
-    # the regular form is still available at /login?form=1.
-    if config.DEMO_MODE and not request.args.get("form"):
+    # In demo mode the login button signs in the owner account directly
+    # and the password form is not shown.
+    if config.DEMO_MODE:
         owner = db.query("select * from users where email = %s", (config.OWNER_EMAIL.lower(),), one=True)
         if owner:
             session.permanent = True

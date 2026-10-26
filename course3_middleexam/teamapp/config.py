@@ -16,13 +16,14 @@ CURRENT_SEASON = "2026"     # default season for new events; update each year
 
 # --- Demo mode (for review / evaluation) -------------------------------------
 # When True, anonymous visitors are treated as DEMO_USER_EMAIL and the login
-# button signs in OWNER_EMAIL without a password. Set False for real use.
+# button signs in OWNER_EMAIL without a password (no login form is shown).
+# Nothing in the UI indicates demo mode. Set False for real use.
 DEMO_MODE = True
 DEMO_USER_EMAIL = "admin@example.com"   # created by seed.py
 
 # --- Owner account (created as admin by seed.py) -----------------------------
 OWNER_NAME = "はると"
-OWNER_EMAIL = "example＠example.com"  # change before production
+OWNER_EMAIL = "example@example.com"
 OWNER_PASSWORD = "pass1234"             # change before production
 
 # --- Security ----------------------------------------------------------------

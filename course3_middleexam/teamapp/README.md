@@ -43,8 +43,8 @@ All settings live in `config.py`:
 
 - `TEAM_NAME`, `TEAM_COLOR`, `CURRENT_SEASON`
 - `DEMO_MODE` — when `True`, anonymous visitors act as `DEMO_USER_EMAIL`
-  and the login button signs in `OWNER_EMAIL` directly (`/login?form=1`
-  shows the regular form). Set `False` for real use.
+  and the login button signs in `OWNER_EMAIL` directly without a password
+  form. Set `False` for real use.
 - `OWNER_NAME`, `OWNER_EMAIL`, `OWNER_PASSWORD`
 - `SECRET_KEY`, `FORCE_HTTPS`
 - `DB_KIND` (`sqlite` | `postgres`), `SQLITE_PATH`, `POSTGRES_DSN`
