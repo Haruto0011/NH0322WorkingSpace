@@ -203,6 +203,15 @@ def registing():
 def login():
     if g.user and not g.demo:          # 本当にログイン済みならホームへ（デモ中は別ユーザで入り直せる）
         return redirect(url_for("index"))
+    # デモモード中は「ログイン」を押すだけでオーナー（自分）のアカウントに入る。
+    # 通常のログイン画面を出したいときは /login?form=1
+    if config.DEMO_MODE and not request.args.get("form"):
+        owner = db.query("select * from users where email = %s", (config.OWNER_EMAIL.lower(),), one=True)
+        if owner:
+            session.permanent = True
+            session["uid"] = owner["uid"]
+            flash(f"{owner['uname']} としてログインしました。", "success")
+            return redirect(url_for("index"))
     return render_template("login.html", title="ログイン")
 
 
@@ -939,7 +948,7 @@ def post_pin(pid):
 def _lineup(eid):
     """先発 / 控え のメンバー一覧"""
     rows = db.query("""
-        select l.role, u.uid, u.uname, u.number, u.position
+        select l.role, u.uid, u.uname, u.number, u.position, u.captain
         from lineups l
         join users u on u.uid = l.uid
         where l.eid = %s
@@ -1080,7 +1089,7 @@ def album():
 @login_required
 def members():
     rows = db.query("""
-        select uid, uname, number, position, role
+        select uid, uname, number, position, role, captain
         from users
         order by coalesce(number, 999), uname
     """)
@@ -1164,7 +1173,7 @@ def member_detail(uid):
                            season=config.CURRENT_SEASON)
 
 
-def _save_profile(uid, allow_role=False):
+def _save_profile(uid, allow_role=False, is_admin=False):
     """プロフィール編集フォームの内容を保存する（自分用と管理者用で共通）。
     エラーメッセージを返す（問題なければ None）"""
     f = request.form
@@ -1195,6 +1204,8 @@ def _save_profile(uid, allow_role=False):
 
     if allow_role and f.get("role") in ("admin", "member"):
         db.execute("update users set role = %s where uid = %s", (f.get("role"), uid))
+    if is_admin:
+        db.execute("update users set captain = %s where uid = %s", (1 if f.get("captain") == "on" else 0, uid))
     return None
 
 
@@ -1219,7 +1230,7 @@ def member_edit(uid):
         abort(404)
     if request.method == "POST":
         # 自分自身の管理者権限は外せない（管理者が誰もいなくなるのを防ぐ）
-        err = _save_profile(uid, allow_role=(uid != g.user["uid"]))
+        err = _save_profile(uid, allow_role=(uid != g.user["uid"]), is_admin=True)
         flash(err or f"{request.form.get('uname', '').strip()} さんのプロフィールを更新しました。",
               "danger" if err else "success")
         return redirect(url_for("member_edit", uid=uid) if err else url_for("member_detail", uid=uid))

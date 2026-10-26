@@ -1,7 +1,7 @@
 """
 お試しデータを入れる（任意）:  python seed.py
 空のDBにだけ入れる。入るもの：
-  ・メンバー20人（監督＋選手19人、身長・体重・生年月日つき）
+  ・メンバー21人（監督＋選手19人＋自分、身長・体重・生年月日つき）
   ・2025シーズン：試合6件（結果入り）
   ・2026シーズン：毎週土曜の練習（過去28週＋今後4週）、試合13件（過去10件は結果入り）、その他の予定
   ・出欠と得点・アシスト・MVP（乱数で生成。毎回同じ内容になる）
@@ -40,7 +40,7 @@ prev_season = str(int(season) - 1)
 members = [
     # (名前, ローマ字, role, 背番号, ポジション, 身長, 体重, 生年月日, 利き足, ひとこと)
     ("監督",   "admin",     "admin",  None, None, None, None, None,         None, "今年こそ昇格！"),
-    ("田中",   "tanaka",    "member", 1,  "GK", 183, 78, "2003-04-12", "右", "ビッグセーブで流れを引き寄せます"),
+    ("田中",   "tanaka",    "member", 1,  "GK", 183, 78, "2003-04-12", "右", "キャプテン。ビッグセーブで流れを引き寄せます"),
     ("山本",   "yamamoto",  "member", 21, "GK", 178, 74, "2005-11-03", "右", ""),
     ("鈴木",   "suzuki",    "member", 2,  "DF", 175, 70, "2004-01-25", "右", ""),
     ("渡辺",   "watanabe",  "member", 3,  "DF", 180, 75, "2003-09-08", "左", "左SB。クロスが武器"),
@@ -62,15 +62,19 @@ members = [
 ]
 uids, pos_of = [], {}
 for name, romaji, role, number, pos, h, w, bd, foot, intro in members:
-    cur.execute(q("insert into users (uname, email, pw, role, number, position, height_cm, weight_kg, birthdate, foot, intro) "
-                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"),
-                (name, f"{romaji}@example.com", pw, role, number, pos, h, w, bd, foot, intro))
+    cur.execute(q("insert into users (uname, email, pw, role, number, position, height_cm, weight_kg, birthdate, foot, intro, captain) "
+                  "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"),
+                (name, f"{romaji}@example.com", pw, role, number, pos, h, w, bd, foot, intro, 1 if romaji == "tanaka" else 0))
 cur.execute(q("select uid, position from users order by uid"))
 for r in cur.fetchall():
     uids.append(r["uid"])
     pos_of[r["uid"]] = r["position"]
 admin_uid = uids[0]
 players = uids[1:]
+
+# 自分（オーナー）のアカウント：config.py の内容で管理者として作る（選手データや出欠には含めない）
+cur.execute(q("insert into users (uname, email, pw, role) values (%s, %s, %s, 'admin')"),
+            (config.OWNER_NAME, config.OWNER_EMAIL.lower(), generate_password_hash(config.OWNER_PASSWORD, method="pbkdf2:sha256")))
 
 # 得点者・アシストの選ばれやすさ（FW > MF > DF、GK は得点しない）
 goal_weight = {"GK": 0, "DF": 1, "MF": 3, "FW": 6}

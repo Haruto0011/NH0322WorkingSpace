@@ -486,3 +486,26 @@ body {
 .card.answered-no {
   border-left: .35rem solid #6c757d;     /* 欠席＝灰色の帯 */
 }
+
+/* ---------- キャプテンマーク（腕章風の黄色い C） ---------- */
+.captain-mark {
+  display: inline-block;
+  min-width: 1.5em;
+  height: 1.5em;
+  line-height: 1.5em;
+  margin-left: .3em;
+  border-radius: .3em;
+  background: #ffc107;
+  color: #212529;
+  font-size: .8rem;
+  font-weight: 800;
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid #e0a800;
+}
+.captain-mark.sm {
+  min-width: 1.3em;
+  height: 1.3em;
+  line-height: 1.3em;
+  font-size: .65rem;
+}

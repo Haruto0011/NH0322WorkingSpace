@@ -22,6 +22,12 @@ CURRENT_SEASON = "2026"
 DEMO_MODE = True
 DEMO_USER_EMAIL = "admin@example.com"   # seed.py が作る管理者
 
+# 自分（オーナー）のアカウント。seed.py がこの内容で管理者として作る。
+# デモモード中は「ログイン」ボタンを押すだけでこのアカウントに入れる（本番では通常のログイン画面になる）
+OWNER_NAME = "はると"
+OWNER_EMAIL = "harutosr1@gmail.com"
+OWNER_PASSWORD = "pass1234"             # 本番運用の前に必ず変える
+
 # セッション（ログイン状態）の暗号化に使う鍵。好きな文字列に変えてもよい
 SECRET_KEY = "6c424ac5d16d778bc1b14afa2c02b1c3"
 

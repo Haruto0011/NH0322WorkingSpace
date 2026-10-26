@@ -23,6 +23,7 @@
     </div>
   </div>
   <p class="text-center small mt-3">はじめての方は <a href="{{ url_for('regist') }}">こちら</a> から登録</p>
+  {% if g.demo %}<p class="text-center small text-muted">デモモード中です。<a href="{{ url_for('index') }}">ログインせずに見る</a></p>{% endif %}
 </div>
 
 {% endblock %}

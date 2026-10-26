@@ -23,6 +23,7 @@ MIGRATIONS = [
     ("users に birthdate 列を追加", "alter table users add column birthdate date"),
     ("users に foot 列を追加", "alter table users add column foot text"),
     ("users に intro 列を追加", "alter table users add column intro text"),
+    ("users に captain 列を追加", "alter table users add column captain integer not null default 0"),
 ]
 
 if config.DB_KIND == "sqlite":

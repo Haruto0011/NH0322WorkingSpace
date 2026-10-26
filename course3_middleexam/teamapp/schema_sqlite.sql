@@ -14,6 +14,7 @@ create table if not exists users (
   birthdate  date,                            -- 生年月日
   foot       text,                            -- 利き足 '右' / '左' / '両'
   intro      text,                            -- 自己紹介・ひとこと
+  captain    integer not null default 0,      -- 1 ならキャプテン
   created_at timestamp default current_timestamp
 );
 

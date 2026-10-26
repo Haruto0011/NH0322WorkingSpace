@@ -14,6 +14,7 @@
     <div>
       <span class="number-badge">{{ m.number if m.number else '–' }}</span>
       <span class="ms-2">{{ m.uname }}</span>
+      {% if m.captain %}<span class="captain-mark" title="キャプテン">C</span>{% endif %}
     </div>
     <div>
       {% if m.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}

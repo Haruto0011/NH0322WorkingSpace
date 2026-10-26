@@ -11,6 +11,7 @@
       <div class="min-w-0">
         <h1 class="h4 mb-1">{{ u.uname }}</h1>
         {% if u.position %}<span class="badge bg-light text-dark border">{{ u.position }}</span>{% endif %}
+        {% if u.captain %}<span class="captain-mark">C</span> <span class="small text-muted">キャプテン</span>{% endif %}
         {% if u.role == 'admin' %}<span class="badge bg-dark">管理者</span>{% endif %}
       </div>
     </div>
