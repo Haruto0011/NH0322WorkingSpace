@@ -32,7 +32,7 @@ FORCE_HTTPS = False                              # redirect http -> https (enabl
 
 # --- Database ----------------------------------------------------------------
 DB_KIND = "postgres"
-POSTGRES_DSN = "host=localhost dbname=s2422113 user=s2422113 password=KXuIIHF5"
+POSTGRES_DSN = "host=localhost dbname=s2422113 user=s2422113 password=AnQJ7fNV"
 SECRET_KEY = "hjfiow4809jcbbuudbndkncju59380809ujjchjfimwknfjjrohfirjfi3hihe5h9h5h9hu095htu835h"
 FORCE_HTTPS = False      # まずは False のまま（URLが http:// なので）
 DEMO_MODE = True
